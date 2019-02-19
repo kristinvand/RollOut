@@ -1,134 +1,197 @@
 package com.example.kristin.rollout;
 
+
 import android.Manifest;
-import android.content.DialogInterface;
-import android.content.Intent;
+import android.content.Context;
 import android.content.pm.PackageManager;
-import android.location.Criteria;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.Build;
-import android.provider.Settings;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
-import android.util.Log;
+import android.support.v4.content.ContextCompat;
+import android.widget.Toast;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.location.LocationListener;
+
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.example.kristin.rollout.R;
+import com.google.android.gms.location.FusedLocationProviderClient;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, LocationListener {
-    final static int PERMISSION_ALL = 1;
-    final static String[] PERMISSIONS = {android.Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION};
+
+public class MapsActivity extends FragmentActivity implements
+        OnMapReadyCallback,
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener,
+        LocationListener {
+
     private GoogleMap mMap;
-    MarkerOptions mo;
-    Marker marker;
-    LocationManager locationManager;
+    private GoogleApiClient googleApiClient;
+    private LocationRequest locationRequest;
+    private Location lastLocation;
+    private Marker currentUserLocationMarker;
+    private static final int Request_User_Location_Code = 99;
+    FusedLocationProviderClient fusedLocationProviderClient;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        {
+            checkUserLocationPermission();
+        }
+
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        mo = new MarkerOptions().position(new LatLng(0, 0)).title("My Current Location");
-        if (Build.VERSION.SDK_INT >= 23 && !isPermissionGranted()) {
-            requestPermissions(PERMISSIONS, PERMISSION_ALL);
-        } else requestLocation();
-        if (!isLocationEnabled())
-            showAlert(1);
     }
+
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        marker =  mMap.addMarker(mo);
+
+        if (ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+        {
+
+            buildGoogleApiClient();
+
+            mMap.setMyLocationEnabled(true);
+
+        }
     }
+
+    public boolean checkUserLocationPermission(){
+        if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+        {
+            if(ActivityCompat.shouldShowRequestPermissionRationale(this,Manifest.permission.ACCESS_FINE_LOCATION))
+            {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, Request_User_Location_Code);
+            }
+
+            else
+            {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, Request_User_Location_Code);
+            }
+
+            return false;
+        }
+
+        else
+        {
+            return true;
+        }
+    }
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case Request_User_Location_Code:
+                if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                {
+                    if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+                    {
+                        if(googleApiClient == null)
+                        {
+                            buildGoogleApiClient();
+                        }
+                        mMap.setMyLocationEnabled(true);
+                    }
+                }
+                else
+                {
+                    Toast.makeText(this,"Permission Denied", Toast.LENGTH_SHORT);
+                }
+
+                return;
+        }
+
+    }
+
+    protected synchronized void buildGoogleApiClient(){
+        googleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
+
+        googleApiClient.connect();
+    }
+
 
     @Override
     public void onLocationChanged(Location location) {
-        LatLng myCoordinates = new LatLng(location.getLatitude(), location.getLongitude());
-        marker.setPosition(myCoordinates);
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(myCoordinates));
-    }
 
-    @Override
-    public void onStatusChanged(String s, int i, Bundle bundle) {
+        lastLocation = location;
 
-    }
+        if(currentUserLocationMarker != null)
+        {
+            currentUserLocationMarker.remove();
+        }
 
-    @Override
-    public void onProviderEnabled(String s) {
+        LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
 
-    }
+        MarkerOptions markerOptions = new MarkerOptions();
+        markerOptions.position(latLng);
+        markerOptions.title("User Current Location");
+        markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE));
 
-    @Override
-    public void onProviderDisabled(String s) {
+        currentUserLocationMarker = mMap.addMarker(markerOptions);
 
-    }
-    private void requestLocation() {
-        Criteria criteria = new Criteria();
-        criteria.setAccuracy(Criteria.ACCURACY_FINE);
-        criteria.setPowerRequirement(Criteria.POWER_HIGH);
-        String provider = locationManager.getBestProvider(criteria, true);
-        locationManager.requestLocationUpdates(provider, 10000, 10, this);
-    }
-    private boolean isLocationEnabled() {
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-    }
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+        mMap.animateCamera(CameraUpdateFactory.zoomBy(14));
 
-    private boolean isPermissionGranted() {
-        if (checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED || checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
-            Log.v("mylog", "Permission is Granted");
-            return true;
-        } else {
-            Log.v("mylog", "Permission not Granted");
-            return false;
+        if(googleApiClient != null)
+        {
+
+            LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient,this);
+
         }
     }
-    private void showAlert(final int status) {
-        String message, title, btnText;
-        if (status == 1) {
-            message = "Your Locations Settings are Set to 'Off'.\nPlease Enable Location to " +
-                    "Use This Application";
-            title = "Enable Location";
-            btnText = "Location Settings";
-        } else {
-            message = "Please Allow this Application to Access Your Location";
-            title = "Permission Access";
-            btnText = "Grant";
+
+
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        locationRequest = new LocationRequest();
+        locationRequest.setInterval(1100);
+        locationRequest.setFastestInterval(1100);
+        locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+
+        if (ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+        {
+
+            LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient,locationRequest,this);
         }
-        final AlertDialog.Builder dialog = new AlertDialog.Builder(this);
-        dialog.setCancelable(false);
-        dialog.setTitle(title)
-                .setMessage(message)
-                .setPositiveButton(btnText, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface paramDialogInterface, int paramInt) {
-                        if (status == 1) {
-                            Intent myIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                            startActivity(myIntent);
-                        } else
-                            requestPermissions(PERMISSIONS, PERMISSION_ALL);
-                    }
-                })
-                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface paramDialogInterface, int paramInt) {
-                        finish();
-                    }
-                });
-        dialog.show();
+
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
     }
 }
