@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
+import android.util.Log;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -30,7 +31,8 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.kristin.rollout.R;
-import com.google.android.gms.location.FusedLocationProviderClient;
+
+import static java.sql.DriverManager.println;
 
 
 public class MapsActivity extends FragmentActivity implements
@@ -45,14 +47,13 @@ public class MapsActivity extends FragmentActivity implements
     private Location lastLocation;
     private Marker currentUserLocationMarker;
     private static final int Request_User_Location_Code = 99;
-    FusedLocationProviderClient fusedLocationProviderClient;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        println("got to this point");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
@@ -70,7 +71,7 @@ public class MapsActivity extends FragmentActivity implements
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        if (ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
         {
 
             buildGoogleApiClient();
