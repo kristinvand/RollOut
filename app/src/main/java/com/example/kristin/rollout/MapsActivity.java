@@ -1,18 +1,27 @@
 package com.example.kristin.rollout;
 
 
+import android.app.Activity;
+
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.inputmethodservice.Keyboard;
 import android.location.Location;
 import android.os.Build;
-import android.util.Log;
+import android.print.PrintAttributes;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -21,7 +30,6 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -30,9 +38,20 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.example.kristin.rollout.R;
 
-import static java.sql.DriverManager.println;
+import com.lyft.lyftbutton.LyftButton;
+import com.lyft.lyftbutton.RideParams;
+import com.lyft.lyftbutton.RideTypeEnum;
+import com.uber.sdk.android.core.UberSdk;
+import com.uber.sdk.android.rides.RideParameters;
+import com.uber.sdk.android.rides.RideRequestButton;
+import com.uber.sdk.android.rides.RideRequestButtonCallback;
+import com.uber.sdk.core.auth.Scope;
+import com.uber.sdk.rides.client.SessionConfiguration;
+import com.uber.sdk.rides.client.ServerTokenSession;
+import com.uber.sdk.rides.client.error.ApiError;
+
+import com.lyft.networking.ApiConfig;
 
 
 public class MapsActivity extends FragmentActivity implements
@@ -46,12 +65,18 @@ public class MapsActivity extends FragmentActivity implements
     private LocationRequest locationRequest;
     private Location lastLocation;
     private Marker currentUserLocationMarker;
+    private LatLng latLng;
+    TextView dropoff_location;
+    TextView pickup_location;
+    TextView calculate_button;
+    com.uber.sdk.android.rides.RideRequestButton uber_button;
+    com.lyft.lyftbutton.LyftButton lyft_button;
+
     private static final int Request_User_Location_Code = 99;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        println("got to this point");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
@@ -64,8 +89,90 @@ public class MapsActivity extends FragmentActivity implements
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+
+        // Lyft Integration
+        ApiConfig apiConfig = new ApiConfig.Builder()
+                .setClientId("93hozlE-5V07")
+                .setClientToken("g7RBXeaGqQmVCk775iWW4ZQJA+I52Y46O5rYRa7b4GsMiqDnwjssYkydlycU4Fzs7CG3WnH+0K23DtCUxmeYHHWg9hgcvaJCWPd4TJov5DkPBXL2kO83Icw=")
+                .build();
+
+        LyftButton lyftButton = (LyftButton) findViewById(R.id.lyft_button);
+        lyftButton.setApiConfig(apiConfig);
+
+        RideParams.Builder rideParamsBuilder = new RideParams.Builder()
+                .setPickupLocation(37.7766048, -122.3943629)
+                .setDropoffLocation(37.759234, -122.4135125);
+        rideParamsBuilder.setRideTypeEnum(RideTypeEnum.CLASSIC);
+
+        lyftButton.setRideParams(rideParamsBuilder.build());
+        lyftButton.load();
+
+        // Uber Integration
+        RideRequestButton requestButton = new RideRequestButton(this);
+        RelativeLayout layout = new RelativeLayout(this);
+        layout.addView(requestButton);
+
+        RideParameters rideParams = new RideParameters.Builder()
+                .setPickupLocation(37.775304, -122.417522, "Uber HQ", "1455 Market Street, San Francisco")
+                .setDropoffLocation(37.795079, -122.4397805, "Embarcadero", "One Embarcadero Center, San Francisco") // Price estimate will only be provided if this is provided.
+                .setProductId("a1111c8c-c720-46c3-8534-2fcdd730040d") // Optional. If not provided, the cheapest product will be used.
+                .build();
+
+        SessionConfiguration config = new SessionConfiguration.Builder()
+                .setClientId("-8NCdgaNOlzqc9mTkp4WMU4l5cm0wp2a")
+                .setServerToken("ocXTg92LK-TjXCLC97lTJPly6WHyAbFbTdPnp1dV")
+                //.setRedirectUri("<REDIRECT_URI>")
+                .build();
+
+        ServerTokenSession session = new ServerTokenSession(config);
+
+        RideRequestButtonCallback callback = new RideRequestButtonCallback() {
+
+            @Override
+            public void onRideInformationLoaded() {
+
+            }
+
+            @Override
+            public void onError(ApiError apiError) {
+
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+
+            }
+        };
+
+        requestButton.setRideParameters(rideParams);
+        requestButton.setSession(session);
+        requestButton.setCallback(callback);
+        requestButton.loadRideInformation();
+
+
     }
 
+    public void onClick(View v) {
+        dropoff_location = findViewById(R.id.dropoff_location);
+        pickup_location = findViewById(R.id.pickup_location);
+        calculate_button = findViewById(R.id.price_calculate);
+        dropoff_location.setY(250);
+        dropoff_location.setTextAlignment(2);
+        dropoff_location.setPadding(50,0,0,0);
+        pickup_location.setVisibility(1);
+        pickup_location.setPadding(50,0,0,0);
+        calculate_button.setVisibility(1);
+
+    }
+
+    public void onButtonClick(View v){
+        uber_button = findViewById(R.id.uber_button);
+        lyft_button = findViewById(R.id.lyft_button);
+        uber_button.setVisibility(1);
+        lyft_button.setVisibility(1);
+        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);    }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -150,7 +257,7 @@ public class MapsActivity extends FragmentActivity implements
             currentUserLocationMarker.remove();
         }
 
-        LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+        latLng = new LatLng(location.getLatitude(), location.getLongitude());
 
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latLng);
@@ -169,6 +276,7 @@ public class MapsActivity extends FragmentActivity implements
 
         }
     }
+
 
 
     @Override
@@ -195,4 +303,5 @@ public class MapsActivity extends FragmentActivity implements
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
 
     }
+
 }
