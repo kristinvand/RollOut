@@ -2,17 +2,16 @@ package com.example.kristin.rollout;
 
 
 import android.Manifest;
-import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
-import android.util.Log;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -21,7 +20,6 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -30,9 +28,15 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.example.kristin.rollout.R;
 
-import static java.sql.DriverManager.println;
+import com.uber.sdk.android.core.UberSdk;
+import com.uber.sdk.android.rides.RideParameters;
+import com.uber.sdk.android.rides.RideRequestButton;
+import com.uber.sdk.android.rides.RideRequestButtonCallback;
+import com.uber.sdk.core.auth.Scope;
+import com.uber.sdk.rides.client.SessionConfiguration;
+import com.uber.sdk.rides.client.ServerTokenSession;
+import com.uber.sdk.rides.client.error.ApiError;
 
 
 public class MapsActivity extends FragmentActivity implements
@@ -46,12 +50,13 @@ public class MapsActivity extends FragmentActivity implements
     private LocationRequest locationRequest;
     private Location lastLocation;
     private Marker currentUserLocationMarker;
+    private LatLng latLng;
+
     private static final int Request_User_Location_Code = 99;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        println("got to this point");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
@@ -64,6 +69,53 @@ public class MapsActivity extends FragmentActivity implements
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+
+        // Uber Integration
+
+
+        RideRequestButton requestButton = new RideRequestButton(this);
+        RelativeLayout layout = new RelativeLayout(this);
+        layout.addView(requestButton);
+
+        RideParameters rideParams = new RideParameters.Builder()
+                .setPickupLocation(37.775304, -122.417522, "Uber HQ", "1455 Market Street, San Francisco")
+                .setDropoffLocation(37.795079, -122.4397805, "Embarcadero", "One Embarcadero Center, San Francisco") // Price estimate will only be provided if this is provided.
+                .setProductId("a1111c8c-c720-46c3-8534-2fcdd730040d") // Optional. If not provided, the cheapest product will be used.
+                .build();
+
+        SessionConfiguration config = new SessionConfiguration.Builder()
+                .setClientId("-8NCdgaNOlzqc9mTkp4WMU4l5cm0wp2a")
+                .setServerToken("ocXTg92LK-TjXCLC97lTJPly6WHyAbFbTdPnp1dV")
+                //.setRedirectUri("<REDIRECT_URI>")
+                .build();
+
+        ServerTokenSession session = new ServerTokenSession(config);
+
+        RideRequestButtonCallback callback = new RideRequestButtonCallback() {
+
+            @Override
+            public void onRideInformationLoaded() {
+
+            }
+
+            @Override
+            public void onError(ApiError apiError) {
+
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+
+            }
+        };
+
+        requestButton.setRideParameters(rideParams);
+        requestButton.setSession(session);
+        requestButton.setCallback(callback);
+        requestButton.loadRideInformation();
+
+
     }
 
 
@@ -150,7 +202,7 @@ public class MapsActivity extends FragmentActivity implements
             currentUserLocationMarker.remove();
         }
 
-        LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+        latLng = new LatLng(location.getLatitude(), location.getLongitude());
 
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latLng);
@@ -169,6 +221,7 @@ public class MapsActivity extends FragmentActivity implements
 
         }
     }
+
 
 
     @Override

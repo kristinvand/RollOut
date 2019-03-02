@@ -1,9 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<fragment xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:map="http://schemas.android.com/apk/res-auto"
+
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/map"
-    android:name="com.google.android.gms.maps.SupportMapFragment"
+    xmlns:uber="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/constraintLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context=".MapsActivity" />
+    android:layout_height="match_parent">
+
+    <fragment
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="600dp"
+        tools:context=".MapsActivity"
+        tools:layout_conversion_absoluteHeight="19dp"
+        tools:layout_conversion_absoluteWidth="73dp"
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="0dp" />
+
+    <EditText
+        android:id="@+id/dropoff_location"
+        android:layout_width="306dp"
+        android:layout_height="42dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="50dp"
+        android:layout_marginRight="50dp"
+        android:layout_marginBottom="8dp"
+        android:background="#FFFFFF"
+        android:textAlignment="center"
+        android:textColor="#1A0000"
+        android:ems="10"
+        android:elevation="10dp"
+        android:hint="Drop Off Location"
+        android:inputType="textPostalAddress"
+        android:text="Where To?"
+        uber:layout_constraintBottom_toBottomOf="parent"
+        uber:layout_constraintEnd_toEndOf="parent"
+        uber:layout_constraintHorizontal_bias="0.936"
+        uber:layout_constraintStart_toStartOf="@+id/map"
+        uber:layout_constraintTop_toTopOf="@+id/map"
+        uber:layout_constraintVertical_bias="0.106" />
+
+    <com.uber.sdk.android.rides.RideRequestButton
+        android:id="@+id/relative_layout"
+        android:layout_width="252dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/map"
+        tools:layout_conversion_absoluteHeight="60dp"
+        tools:layout_conversion_absoluteWidth="30dp"
+        uber:layout_constraintBottom_toBottomOf="parent"
+        uber:layout_constraintStart_toStartOf="parent"></com.uber.sdk.android.rides.RideRequestButton>
+
+</android.support.constraint.ConstraintLayout>
