@@ -4,7 +4,9 @@ package com.example.kristin.rollout;
 import android.app.Activity;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.inputmethodservice.Keyboard;
 import android.location.Location;
 import android.os.Build;
 import android.print.PrintAttributes;
@@ -16,6 +18,8 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,6 +39,9 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import com.lyft.lyftbutton.LyftButton;
+import com.lyft.lyftbutton.RideParams;
+import com.lyft.lyftbutton.RideTypeEnum;
 import com.uber.sdk.android.core.UberSdk;
 import com.uber.sdk.android.rides.RideParameters;
 import com.uber.sdk.android.rides.RideRequestButton;
@@ -61,6 +68,10 @@ public class MapsActivity extends FragmentActivity implements
     private LatLng latLng;
     TextView dropoff_location;
     TextView pickup_location;
+    TextView calculate_button;
+    com.uber.sdk.android.rides.RideRequestButton uber_button;
+    com.lyft.lyftbutton.LyftButton lyft_button;
+
     private static final int Request_User_Location_Code = 99;
 
 
@@ -86,6 +97,16 @@ public class MapsActivity extends FragmentActivity implements
                 .setClientToken("g7RBXeaGqQmVCk775iWW4ZQJA+I52Y46O5rYRa7b4GsMiqDnwjssYkydlycU4Fzs7CG3WnH+0K23DtCUxmeYHHWg9hgcvaJCWPd4TJov5DkPBXL2kO83Icw=")
                 .build();
 
+        LyftButton lyftButton = (LyftButton) findViewById(R.id.lyft_button);
+        lyftButton.setApiConfig(apiConfig);
+
+        RideParams.Builder rideParamsBuilder = new RideParams.Builder()
+                .setPickupLocation(37.7766048, -122.3943629)
+                .setDropoffLocation(37.759234, -122.4135125);
+        rideParamsBuilder.setRideTypeEnum(RideTypeEnum.CLASSIC);
+
+        lyftButton.setRideParams(rideParamsBuilder.build());
+        lyftButton.load();
 
         // Uber Integration
         RideRequestButton requestButton = new RideRequestButton(this);
@@ -135,13 +156,23 @@ public class MapsActivity extends FragmentActivity implements
     public void onClick(View v) {
         dropoff_location = findViewById(R.id.dropoff_location);
         pickup_location = findViewById(R.id.pickup_location);
-        dropoff_location.setY(200);
+        calculate_button = findViewById(R.id.price_calculate);
+        dropoff_location.setY(250);
         dropoff_location.setTextAlignment(2);
         dropoff_location.setPadding(50,0,0,0);
         pickup_location.setVisibility(1);
         pickup_location.setPadding(50,0,0,0);
+        calculate_button.setVisibility(1);
 
     }
+
+    public void onButtonClick(View v){
+        uber_button = findViewById(R.id.uber_button);
+        lyft_button = findViewById(R.id.lyft_button);
+        uber_button.setVisibility(1);
+        lyft_button.setVisibility(1);
+        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);    }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
