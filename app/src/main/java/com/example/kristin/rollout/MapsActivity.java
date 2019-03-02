@@ -1,6 +1,8 @@
 package com.example.kristin.rollout;
 
 
+import android.app.Activity;
+
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -42,6 +44,8 @@ import com.uber.sdk.rides.client.SessionConfiguration;
 import com.uber.sdk.rides.client.ServerTokenSession;
 import com.uber.sdk.rides.client.error.ApiError;
 
+import com.lyft.networking.ApiConfig;
+
 
 public class MapsActivity extends FragmentActivity implements
         OnMapReadyCallback,
@@ -76,9 +80,14 @@ public class MapsActivity extends FragmentActivity implements
         mapFragment.getMapAsync(this);
 
 
+        // Lyft Integration
+        ApiConfig apiConfig = new ApiConfig.Builder()
+                .setClientId("93hozlE-5V07")
+                .setClientToken("g7RBXeaGqQmVCk775iWW4ZQJA+I52Y46O5rYRa7b4GsMiqDnwjssYkydlycU4Fzs7CG3WnH+0K23DtCUxmeYHHWg9hgcvaJCWPd4TJov5DkPBXL2kO83Icw=")
+                .build();
+
+
         // Uber Integration
-
-
         RideRequestButton requestButton = new RideRequestButton(this);
         RelativeLayout layout = new RelativeLayout(this);
         layout.addView(requestButton);

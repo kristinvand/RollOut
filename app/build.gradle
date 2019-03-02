@@ -29,7 +29,7 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     implementation 'com.uber.sdk:rides-android:0.5.3'
     implementation 'com.android.support.constraint:constraint-layout:1.1.3'
-    // implementation 'com.lyft:lyft-android-sdk:1.0.3'
+    implementation 'com.lyft:lyft-android-sdk:1.0.3'
 
 
 
