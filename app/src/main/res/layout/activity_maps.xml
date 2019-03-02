@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:lyft="http://schemas.android.com/apk/res-auto"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    xmlns:uber="http://schemas.android.com/apk/res-auto"
     android:id="@+id/constraintLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -11,14 +10,12 @@
     <fragment
         android:id="@+id/map"
         android:name="com.google.android.gms.maps.SupportMapFragment"
-        android:layout_width="match_parent"
-        android:layout_height="679dp"
-        lyft:layout_constraintBottom_toBottomOf="parent"
-        lyft:layout_constraintEnd_toEndOf="parent"
-        lyft:layout_constraintHorizontal_bias="0.0"
-        lyft:layout_constraintStart_toStartOf="parent"
-        lyft:layout_constraintTop_toTopOf="parent"
-        lyft:layout_constraintVertical_bias="1.0"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         tools:context=".MapsActivity"
         tools:layout_conversion_absoluteHeight="19dp"
         tools:layout_conversion_absoluteWidth="73dp" />
@@ -40,15 +37,16 @@
         android:hint="Where To?"
         android:includeFontPadding="true"
         android:inputType="textPostalAddress"
-        android:onClick="onClick"
+        android:onClick="textInputButton"
         android:textAlignment="center"
         android:visibility="visible"
-        uber:layout_constraintBottom_toBottomOf="parent"
-        uber:layout_constraintEnd_toEndOf="parent"
-        uber:layout_constraintHorizontal_bias="0.494"
-        uber:layout_constraintStart_toStartOf="parent"
-        uber:layout_constraintTop_toTopOf="parent"
-        uber:layout_constraintVertical_bias="0.335" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/map"
+        app:layout_constraintHorizontal_bias="0.494"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.348" />
+
 
     <EditText
         android:id="@+id/pickup_location"
@@ -66,12 +64,12 @@
         android:hint="Current Location"
         android:inputType="textPostalAddress"
         android:visibility="invisible"
-        lyft:layout_constraintVertical_bias="0.075"
-        uber:layout_constraintBottom_toBottomOf="@+id/map"
-        uber:layout_constraintEnd_toEndOf="parent"
-        uber:layout_constraintHorizontal_bias="0.494"
-        uber:layout_constraintStart_toStartOf="parent"
-        uber:layout_constraintTop_toTopOf="@+id/map" />
+        app:layout_constraintBottom_toBottomOf="@+id/uber_button"
+        app:layout_constraintEnd_toEndOf="@+id/map"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.015" />
+
 
     <Button
         android:id="@+id/price_calculate"
@@ -79,49 +77,47 @@
         android:layout_height="54dp"
         android:layout_marginStart="8dp"
         android:layout_marginLeft="8dp"
+        android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginRight="8dp"
-        android:layout_marginBottom="448dp"
+        android:layout_marginBottom="8dp"
         android:background="@color/black"
+        android:clickable="true"
+        android:onClick="priceCalculateButton"
         android:text="Calculate Price"
         android:textColor="@color/white"
         android:visibility="invisible"
-        uber:layout_constraintBottom_toBottomOf="@+id/map"
-        uber:layout_constraintEnd_toEndOf="parent"
-        uber:layout_constraintHorizontal_bias="0.494"
-        uber:layout_constraintStart_toStartOf="parent"
-        android:onClick="onButtonClick"
-        android:clickable="true"
-        />
-
-    <com.uber.sdk.android.rides.RideRequestButton
-        android:id="@+id/uber_button"
-        android:layout_width="411dp"
-        android:layout_height="61dp"
-        android:layout_below="@id/map"
-        android:layout_marginBottom="4dp"
-        android:visibility="invisible"
-        tools:layout_conversion_absoluteHeight="60dp"
-        tools:layout_conversion_absoluteWidth="30dp"
-        uber:layout_constraintBottom_toBottomOf="parent"
-        uber:layout_constraintEnd_toEndOf="parent"
-        uber:layout_constraintHorizontal_bias="0.0"
-        uber:layout_constraintStart_toStartOf="parent"
-        uber:layout_constraintTop_toBottomOf="@+id/map"
-        uber:layout_constraintVertical_bias="1.0"></com.uber.sdk.android.rides.RideRequestButton>
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.268" />
 
     <com.lyft.lyftbutton.LyftButton
         android:id="@+id/lyft_button"
-        android:layout_width="409dp"
-        android:layout_height="60dp"
+        android:layout_width="423dp"
+        android:layout_height="55dp"
+
         android:visibility="invisible"
-        lyft:lyftStyle="lyftMulberryDark"
-        uber:layout_constraintBottom_toBottomOf="parent"
-        uber:layout_constraintEnd_toEndOf="parent"
-        uber:layout_constraintHorizontal_bias="0.0"
-        uber:layout_constraintStart_toStartOf="parent"
-        uber:layout_constraintTop_toTopOf="parent"
-        uber:layout_constraintVertical_bias="0.878"></com.lyft.lyftbutton.LyftButton>
+        app:layout_constraintBottom_toTopOf="@+id/uber_button"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/map"
+        app:layout_constraintVertical_bias="1.0"
+        app:lyftStyle="lyftMulberryDark"></com.lyft.lyftbutton.LyftButton>
+
+    <com.uber.sdk.android.rides.RideRequestButton
+        android:id="@+id/uber_button"
+        android:layout_width="415dp"
+        android:layout_height="55dp"
+        android:layout_below="@id/map"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/map"
+        app:layout_constraintVertical_bias="1.0"></com.uber.sdk.android.rides.RideRequestButton>
 
 
 </android.support.constraint.ConstraintLayout>

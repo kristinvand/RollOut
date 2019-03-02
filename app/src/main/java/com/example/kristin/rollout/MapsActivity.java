@@ -17,15 +17,21 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.view.KeyEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.location.LocationListener;
+
+import android.location.Address;
+import android.location.Geocoder;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
@@ -53,6 +59,9 @@ import com.uber.sdk.rides.client.error.ApiError;
 
 import com.lyft.networking.ApiConfig;
 
+import java.io.IOException;
+import java.util.List;
+
 
 public class MapsActivity extends FragmentActivity implements
         OnMapReadyCallback,
@@ -66,6 +75,8 @@ public class MapsActivity extends FragmentActivity implements
     private Location lastLocation;
     private Marker currentUserLocationMarker;
     private LatLng latLng;
+    double dropoff_lat;
+    double dropoff_long;
     TextView dropoff_location;
     TextView pickup_location;
     TextView calculate_button;
@@ -81,14 +92,36 @@ public class MapsActivity extends FragmentActivity implements
         setContentView(R.layout.activity_maps);
 
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-        {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             checkUserLocationPermission();
         }
 
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        createRide();
+
+    }
+
+
+    public void createRide(){
+
+        // Gets User Text Information
+        EditText dropoff_location_input = (EditText) findViewById(R.id.dropoff_location);
+        String dropoff_location_text = dropoff_location_input.getText().toString();
+
+        Geocoder geoCoder = new Geocoder(this);
+        if(geoCoder.isPresent()) {
+            try {
+                List<Address> list = geoCoder.getFromLocationName(dropoff_location_text, 1);
+                Address address = list.get(0);
+                double dropoff_lat = address.getLatitude();
+                double dropoff_long = address.getLongitude();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 
 
         // Lyft Integration
@@ -102,7 +135,7 @@ public class MapsActivity extends FragmentActivity implements
 
         RideParams.Builder rideParamsBuilder = new RideParams.Builder()
                 .setPickupLocation(37.7766048, -122.3943629)
-                .setDropoffLocation(37.759234, -122.4135125);
+                .setDropoffLocation(41.20572, -81.415929);
         rideParamsBuilder.setRideTypeEnum(RideTypeEnum.CLASSIC);
 
         lyftButton.setRideParams(rideParamsBuilder.build());
@@ -115,7 +148,7 @@ public class MapsActivity extends FragmentActivity implements
 
         RideParameters rideParams = new RideParameters.Builder()
                 .setPickupLocation(37.775304, -122.417522, "Uber HQ", "1455 Market Street, San Francisco")
-                .setDropoffLocation(37.795079, -122.4397805, "Embarcadero", "One Embarcadero Center, San Francisco") // Price estimate will only be provided if this is provided.
+                .setDropoffLocation(41.20572, -81.415929, "Embarcadero", "2131 Weston Drive, Hudson Ohio 44236") // Price estimate will only be provided if this is provided.
                 .setProductId("a1111c8c-c720-46c3-8534-2fcdd730040d") // Optional. If not provided, the cheapest product will be used.
                 .build();
 
@@ -151,9 +184,12 @@ public class MapsActivity extends FragmentActivity implements
         requestButton.loadRideInformation();
 
 
-    }
 
-    public void onClick(View v) {
+}
+
+
+    // Where To Click
+    public void textInputButton(View v) {
         dropoff_location = findViewById(R.id.dropoff_location);
         pickup_location = findViewById(R.id.pickup_location);
         calculate_button = findViewById(R.id.price_calculate);
@@ -166,13 +202,18 @@ public class MapsActivity extends FragmentActivity implements
 
     }
 
-    public void onButtonClick(View v){
+    // Calculate Price Click
+    public void priceCalculateButton(View v){
         uber_button = findViewById(R.id.uber_button);
         lyft_button = findViewById(R.id.lyft_button);
         uber_button.setVisibility(1);
         lyft_button.setVisibility(1);
         InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);    }
+        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+
+        createRide();
+
+    }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
