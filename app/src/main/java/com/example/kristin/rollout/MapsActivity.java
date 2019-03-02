@@ -5,13 +5,17 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
+import android.print.PrintAttributes;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.view.View;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -51,7 +55,8 @@ public class MapsActivity extends FragmentActivity implements
     private Location lastLocation;
     private Marker currentUserLocationMarker;
     private LatLng latLng;
-
+    TextView dropoff_location;
+    TextView pickup_location;
     private static final int Request_User_Location_Code = 99;
 
 
@@ -118,6 +123,16 @@ public class MapsActivity extends FragmentActivity implements
 
     }
 
+    public void onClick(View v) {
+        dropoff_location = findViewById(R.id.dropoff_location);
+        pickup_location = findViewById(R.id.pickup_location);
+        dropoff_location.setY(200);
+        dropoff_location.setTextAlignment(2);
+        dropoff_location.setPadding(50,0,0,0);
+        pickup_location.setVisibility(1);
+        pickup_location.setPadding(50,0,0,0);
+
+    }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -248,4 +263,5 @@ public class MapsActivity extends FragmentActivity implements
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
 
     }
+
 }
