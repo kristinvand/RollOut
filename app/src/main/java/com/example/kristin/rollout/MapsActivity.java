@@ -1,27 +1,19 @@
 package com.example.kristin.rollout;
 
 
-import android.app.Activity;
-
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.inputmethodservice.Keyboard;
 import android.location.Location;
 import android.os.Build;
-import android.print.PrintAttributes;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
-import android.view.KeyEvent;
 import android.view.View;
-import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
@@ -48,11 +40,9 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.lyft.lyftbutton.LyftButton;
 import com.lyft.lyftbutton.RideParams;
 import com.lyft.lyftbutton.RideTypeEnum;
-import com.uber.sdk.android.core.UberSdk;
 import com.uber.sdk.android.rides.RideParameters;
 import com.uber.sdk.android.rides.RideRequestButton;
 import com.uber.sdk.android.rides.RideRequestButtonCallback;
-import com.uber.sdk.core.auth.Scope;
 import com.uber.sdk.rides.client.SessionConfiguration;
 import com.uber.sdk.rides.client.ServerTokenSession;
 import com.uber.sdk.rides.client.error.ApiError;
@@ -60,6 +50,7 @@ import com.uber.sdk.rides.client.error.ApiError;
 import com.lyft.networking.ApiConfig;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -76,7 +67,9 @@ public class MapsActivity extends FragmentActivity implements
     private Marker currentUserLocationMarker;
     private LatLng latLng;
     double dropoff_lat;
-    double dropoff_long;
+    double dropoff_lng;
+    double pickup_lat;
+    double pickup_lng;
     TextView dropoff_location;
     TextView pickup_location;
     TextView calculate_button;
@@ -100,28 +93,36 @@ public class MapsActivity extends FragmentActivity implements
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        createRide();
-
     }
 
 
-    public void createRide(){
+    public void createRide() throws IOException {
 
-        // Gets User Text Information
+        // Gets User Desired Location Information
         EditText dropoff_location_input = (EditText) findViewById(R.id.dropoff_location);
         String dropoff_location_text = dropoff_location_input.getText().toString();
 
-        Geocoder geoCoder = new Geocoder(this);
-        if(geoCoder.isPresent()) {
-            try {
-                List<Address> list = geoCoder.getFromLocationName(dropoff_location_text, 1);
-                Address address = list.get(0);
-                double dropoff_lat = address.getLatitude();
-                double dropoff_long = address.getLongitude();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        // Get Pickup Location
+        EditText pickup_location_input = (EditText) findViewById(R.id.pickup_location);
+        String pickup_location_text = dropoff_location_input.getText().toString();
+
+        List<Address> dropoff_address;
+        List<Address> pickup_address;
+
+        Geocoder coder = new Geocoder(this);
+
+        dropoff_address = coder.getFromLocationName(dropoff_location_text, 1);
+        pickup_address = coder.getFromLocationName(pickup_location_text, 1);
+
+
+        Address dropoff_location = dropoff_address.get(0);
+        Address pickup_location = dropoff_address.get(0);
+
+        dropoff_lat = dropoff_location.getLatitude();
+        dropoff_lng = dropoff_location.getLongitude();
+
+        pickup_lat = pickup_location.getLatitude();
+        pickup_lng = pickup_location.getLongitude();
 
 
         // Lyft Integration
@@ -134,12 +135,14 @@ public class MapsActivity extends FragmentActivity implements
         lyftButton.setApiConfig(apiConfig);
 
         RideParams.Builder rideParamsBuilder = new RideParams.Builder()
-                .setPickupLocation(37.7766048, -122.3943629)
-                .setDropoffLocation(41.20572, -81.415929);
+                .setPickupLocation(pickup_lat, pickup_lng)
+                .setDropoffLocation(dropoff_lat, dropoff_lng);
         rideParamsBuilder.setRideTypeEnum(RideTypeEnum.CLASSIC);
 
         lyftButton.setRideParams(rideParamsBuilder.build());
         lyftButton.load();
+
+
 
         // Uber Integration
         RideRequestButton requestButton = new RideRequestButton(this);
@@ -182,9 +185,6 @@ public class MapsActivity extends FragmentActivity implements
         requestButton.setSession(session);
         requestButton.setCallback(callback);
         requestButton.loadRideInformation();
-
-
-
 }
 
 
@@ -203,7 +203,7 @@ public class MapsActivity extends FragmentActivity implements
     }
 
     // Calculate Price Click
-    public void priceCalculateButton(View v){
+    public void priceCalculateButton(View v) throws IOException {
         uber_button = findViewById(R.id.uber_button);
         lyft_button = findViewById(R.id.lyft_button);
         uber_button.setVisibility(1);

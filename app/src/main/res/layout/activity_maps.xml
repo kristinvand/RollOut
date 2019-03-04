@@ -18,7 +18,8 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:context=".MapsActivity"
         tools:layout_conversion_absoluteHeight="19dp"
-        tools:layout_conversion_absoluteWidth="73dp" />
+        tools:layout_conversion_absoluteWidth="73dp"
+        tools:layout="@layout/activity_maps" />
 
     <EditText
         android:id="@+id/dropoff_location"
@@ -36,7 +37,6 @@
         android:ems="10"
         android:hint="Where To?"
         android:includeFontPadding="true"
-        android:inputType="textPostalAddress"
         android:onClick="textInputButton"
         android:textAlignment="center"
         android:visibility="visible"
@@ -81,6 +81,7 @@
         android:layout_marginEnd="8dp"
         android:layout_marginRight="8dp"
         android:layout_marginBottom="8dp"
+        android:elevation="10dp"
         android:background="@color/black"
         android:clickable="true"
         android:onClick="priceCalculateButton"
@@ -97,7 +98,6 @@
         android:id="@+id/lyft_button"
         android:layout_width="423dp"
         android:layout_height="55dp"
-
         android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@+id/uber_button"
         app:layout_constraintEnd_toEndOf="parent"
