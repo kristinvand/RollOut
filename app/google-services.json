@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "507532794033",
+    "firebase_url": "https://rollout-228119.firebaseio.com",
+    "project_id": "rollout-228119",
+    "storage_bucket": "rollout-228119.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:507532794033:android:74c10ded474f01ac",
+        "android_client_info": {
+          "package_name": "com.example.kristin.rollout"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "507532794033-4kgs2k6lvfgpcourj2ockftsbc1e31og.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7kto52gKTJq9CAQ7GHcttuMF9nlvazgQ"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

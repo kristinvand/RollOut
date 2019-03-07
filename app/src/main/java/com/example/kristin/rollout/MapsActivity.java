@@ -4,6 +4,7 @@ package com.example.kristin.rollout;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.os.Build;
 import android.support.annotation.NonNull;
@@ -12,10 +13,10 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -37,25 +38,31 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+
 import com.lyft.lyftbutton.LyftButton;
 import com.lyft.lyftbutton.RideParams;
 import com.lyft.lyftbutton.RideTypeEnum;
+import com.uber.sdk.android.core.UberButton;
 import com.uber.sdk.android.rides.RideParameters;
 import com.uber.sdk.android.rides.RideRequestButton;
-import com.uber.sdk.android.rides.RideRequestButtonCallback;
 import com.uber.sdk.rides.client.SessionConfiguration;
 import com.uber.sdk.rides.client.ServerTokenSession;
-import com.uber.sdk.rides.client.error.ApiError;
 
 import com.lyft.networking.ApiConfig;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
+
+import com.example.kristin.rollout.directionhelpers.FetchURL;
+import com.example.kristin.rollout.directionhelpers.TaskLoadedCallback;
+
 
 
 public class MapsActivity extends FragmentActivity implements
         OnMapReadyCallback,
+        TaskLoadedCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
         LocationListener {
@@ -70,6 +77,8 @@ public class MapsActivity extends FragmentActivity implements
     double dropoff_lng;
     double pickup_lat;
     double pickup_lng;
+    MarkerOptions dropoff_marker, pickup_marker;
+    Polyline currentPolyline;
     TextView dropoff_location;
     TextView pickup_location;
     TextView calculate_button;
@@ -98,107 +107,123 @@ public class MapsActivity extends FragmentActivity implements
 
     public void createRide() throws IOException {
 
-        // Gets User Desired Location Information
-        EditText dropoff_location_input = (EditText) findViewById(R.id.dropoff_location);
-        String dropoff_location_text = dropoff_location_input.getText().toString();
+        // Gets User's Inputted Information
+            EditText dropoff_location_input = (EditText) findViewById(R.id.dropoff_location);
+            String dropoff_location_text = dropoff_location_input.getText().toString();
+            EditText pickup_location_input = (EditText) findViewById(R.id.pickup_location);
+            String pickup_location_text = pickup_location_input.getText().toString();
 
-        // Get Pickup Location
-        EditText pickup_location_input = (EditText) findViewById(R.id.pickup_location);
-        String pickup_location_text = dropoff_location_input.getText().toString();
+        // Geocodes Input into Address
+            List<Address> dropoff_address;
+            List<Address> pickup_address;
 
-        List<Address> dropoff_address;
-        List<Address> pickup_address;
+            Geocoder coder = new Geocoder(this);
 
-        Geocoder coder = new Geocoder(this);
+            dropoff_address = coder.getFromLocationName(dropoff_location_text, 1);
+            pickup_address = coder.getFromLocationName(pickup_location_text, 1);
 
-        dropoff_address = coder.getFromLocationName(dropoff_location_text, 1);
-        pickup_address = coder.getFromLocationName(pickup_location_text, 1);
+            Address dropoff_location = dropoff_address.get(0);
+            Address pickup_location = pickup_address.get(0);
 
+            dropoff_lat = dropoff_location.getLatitude();
+            dropoff_lng = dropoff_location.getLongitude();
+            LatLng dropoff_latlng = new LatLng(dropoff_lat, dropoff_lng);
 
-        Address dropoff_location = dropoff_address.get(0);
-        Address pickup_location = dropoff_address.get(0);
+            pickup_lat = pickup_location.getLatitude();
+            pickup_lng = pickup_location.getLongitude();
+            LatLng pickup_latlng = new LatLng(pickup_lat, pickup_lng);
 
-        dropoff_lat = dropoff_location.getLatitude();
-        dropoff_lng = dropoff_location.getLongitude();
+            if(pickup_location_input == null){
+                pickup_lat = latLng.latitude;
+                pickup_lng = latLng.longitude;
+                pickup_address = coder.getFromLocation(pickup_lat, pickup_lng, 1);
+            }
 
-        pickup_lat = pickup_location.getLatitude();
-        pickup_lng = pickup_location.getLongitude();
+        // Map Configurations
+            pickup_marker = new MarkerOptions().position(new LatLng(pickup_lat, pickup_lng)).title("Pick Up");
+            dropoff_marker = new MarkerOptions().position(new LatLng(dropoff_lat, dropoff_lng)).title("Drop Off");
+            pickup_marker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE));
 
+            mMap.addMarker(pickup_marker);
+            mMap.addMarker(dropoff_marker);
+
+            latLng = new LatLng(pickup_location.getLatitude(), pickup_location.getLongitude());
+
+            // String url = getUrl(pickup_latlng, dropoff_latlng, "driving");
+
+            String url = getUrl(pickup_marker.getPosition(), dropoff_marker.getPosition(), "driving");
+            new FetchURL(this).execute(url, "driving");
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+            mMap.animateCamera(CameraUpdateFactory.zoomBy(14));
 
         // Lyft Integration
-        ApiConfig apiConfig = new ApiConfig.Builder()
-                .setClientId("93hozlE-5V07")
-                .setClientToken("g7RBXeaGqQmVCk775iWW4ZQJA+I52Y46O5rYRa7b4GsMiqDnwjssYkydlycU4Fzs7CG3WnH+0K23DtCUxmeYHHWg9hgcvaJCWPd4TJov5DkPBXL2kO83Icw=")
-                .build();
+            ApiConfig apiConfig = new ApiConfig.Builder()
+                    .setClientId("93hozlE-5V07")
+                    .setClientToken("g7RBXeaGqQmVCk775iWW4ZQJA+I52Y46O5rYRa7b4GsMiqDnwjssYkydlycU4Fzs7CG3WnH+0K23DtCUxmeYHHWg9hgcvaJCWPd4TJov5DkPBXL2kO83Icw=")
+                    .build();
 
-        LyftButton lyftButton = (LyftButton) findViewById(R.id.lyft_button);
-        lyftButton.setApiConfig(apiConfig);
+            LyftButton lyftButton = (LyftButton) findViewById(R.id.lyft_button);
+            lyftButton.setApiConfig(apiConfig);
 
-        RideParams.Builder rideParamsBuilder = new RideParams.Builder()
-                .setPickupLocation(pickup_lat, pickup_lng)
-                .setDropoffLocation(dropoff_lat, dropoff_lng);
-        rideParamsBuilder.setRideTypeEnum(RideTypeEnum.CLASSIC);
+            RideParams.Builder rideParamsBuilder = new RideParams.Builder()
+                    .setPickupLocation(pickup_lat, pickup_lng)
+                    .setDropoffLocation(dropoff_lat, dropoff_lng);
+            rideParamsBuilder.setRideTypeEnum(RideTypeEnum.CLASSIC);
 
-        lyftButton.setRideParams(rideParamsBuilder.build());
-        lyftButton.load();
+            lyftButton.setRideParams(rideParamsBuilder.build());
+            lyftButton.load();
 
 
 
         // Uber Integration
-        RideRequestButton requestButton = new RideRequestButton(this);
-        RelativeLayout layout = new RelativeLayout(this);
-        layout.addView(requestButton);
+            RideRequestButton requestButton = new RideRequestButton(this);
+            UberButton uberButton = (UberButton) findViewById(R.id.uber_button);
 
-        RideParameters rideParams = new RideParameters.Builder()
-                .setPickupLocation(37.775304, -122.417522, "Uber HQ", "1455 Market Street, San Francisco")
-                .setDropoffLocation(41.20572, -81.415929, "Embarcadero", "2131 Weston Drive, Hudson Ohio 44236") // Price estimate will only be provided if this is provided.
-                .setProductId("a1111c8c-c720-46c3-8534-2fcdd730040d") // Optional. If not provided, the cheapest product will be used.
-                .build();
+            RideParameters rideParams = new RideParameters.Builder()
+                    .setPickupLocation(pickup_lat, pickup_lng, "", "")
+                    .setDropoffLocation(dropoff_lat, dropoff_lng, "", "")
+                    .setProductId("a1111c8c-c720-46c3-8534-2fcdd730040d")
+                    .build();
 
-        SessionConfiguration config = new SessionConfiguration.Builder()
-                .setClientId("-8NCdgaNOlzqc9mTkp4WMU4l5cm0wp2a")
-                .setServerToken("ocXTg92LK-TjXCLC97lTJPly6WHyAbFbTdPnp1dV")
-                //.setRedirectUri("<REDIRECT_URI>")
-                .build();
-
-        ServerTokenSession session = new ServerTokenSession(config);
-
-        RideRequestButtonCallback callback = new RideRequestButtonCallback() {
-
-            @Override
-            public void onRideInformationLoaded() {
-
-            }
-
-            @Override
-            public void onError(ApiError apiError) {
-
-            }
-
-            @Override
-            public void onError(Throwable throwable) {
-
-            }
-        };
-
-        requestButton.setRideParameters(rideParams);
-        requestButton.setSession(session);
-        requestButton.setCallback(callback);
-        requestButton.loadRideInformation();
-}
+            SessionConfiguration config = new SessionConfiguration.Builder()
+                    .setClientId("-8NCdgaNOlzqc9mTkp4WMU4l5cm0wp2a")
+                    .setServerToken("ocXTg92LK-TjXCLC97lTJPly6WHyAbFbTdPnp1dV")
+                    .build();
+            ServerTokenSession session = new ServerTokenSession(config);
 
 
-    // Where To Click
+            requestButton.setRideParameters(rideParams);
+            requestButton.setSession(session);
+            requestButton.loadRideInformation();
+
+        Toast.makeText(this,"reached this point", Toast.LENGTH_LONG).show();
+
+    }
+
+    private String getUrl(LatLng origin, LatLng dest, String directionMode) {
+        String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
+        String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
+        String mode = "mode=" + directionMode;
+        String parameters = str_origin + "&" + str_dest + "&" + mode;
+        String output = "json";
+        String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters + "&key=" + getString(R.string.google_maps_key);
+        return url;
+    }
+
+
+
+    // 'Where To' Click
     public void textInputButton(View v) {
         dropoff_location = findViewById(R.id.dropoff_location);
         pickup_location = findViewById(R.id.pickup_location);
         calculate_button = findViewById(R.id.price_calculate);
         dropoff_location.setY(250);
-        dropoff_location.setTextAlignment(2);
+        //dropoff_location.setTextAlignment(2);
         dropoff_location.setPadding(50,0,0,0);
-        pickup_location.setVisibility(1);
+        pickup_location.setVisibility(View.VISIBLE);
         pickup_location.setPadding(50,0,0,0);
-        calculate_button.setVisibility(1);
+        calculate_button.setVisibility(View.VISIBLE);
 
     }
 
@@ -206,8 +231,8 @@ public class MapsActivity extends FragmentActivity implements
     public void priceCalculateButton(View v) throws IOException {
         uber_button = findViewById(R.id.uber_button);
         lyft_button = findViewById(R.id.lyft_button);
-        uber_button.setVisibility(1);
-        lyft_button.setVisibility(1);
+        uber_button.setVisibility(View.VISIBLE);
+        lyft_button.setVisibility(View.VISIBLE);
         InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
 
@@ -345,4 +370,12 @@ public class MapsActivity extends FragmentActivity implements
 
     }
 
+
+    @Override
+    public void onTaskDone(Object... values) {
+        if(currentPolyline != null){
+            currentPolyline.remove();
+        }
+        currentPolyline = mMap.addPolyline((PolylineOptions)values[0]);
+    }
 }

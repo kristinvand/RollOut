@@ -16,10 +16,12 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:context=".MapsActivity"
         tools:layout_conversion_absoluteHeight="19dp"
         tools:layout_conversion_absoluteWidth="73dp"
-        tools:layout="@layout/activity_maps" />
+        tools:context="com.example.polygons.PolyActivity"
+         />
+
+
 
     <EditText
         android:id="@+id/dropoff_location"
