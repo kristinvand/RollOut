@@ -34,6 +34,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -76,6 +77,7 @@ public class MapsActivity extends FragmentActivity implements
     double dropoff_lng;
     double pickup_lat;
     double pickup_lng;
+    Double maxLat = null, minLat = null, minLon = null, maxLon = null;
     MarkerOptions dropoff_marker, pickup_marker;
     Polyline currentPolyline;
     TextView dropoff_location;
@@ -149,7 +151,30 @@ public class MapsActivity extends FragmentActivity implements
             String url = getUrl(pickup_marker.getPosition(), dropoff_marker.getPosition(), "driving");
             new FetchURL(this).execute(url, "driving");
 
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+            boolean hasPoints = false;
+            Double maxLat = null, minLat = null, minLon = null, maxLon = null;
+
+            if (currentPolyline != null && currentPolyline.getPoints() != null) {
+                List<LatLng> pts = currentPolyline.getPoints();
+                for (LatLng coordinate : pts) {
+
+                    maxLat = maxLat != null ? Math.max(coordinate.latitude, maxLat) : coordinate.latitude;
+                    minLat = minLat != null ? Math.min(coordinate.latitude, minLat) : coordinate.latitude;
+
+                    maxLon = maxLon != null ? Math.max(coordinate.longitude, maxLon) : coordinate.longitude;
+                    minLon = minLon != null ? Math.min(coordinate.longitude, minLon) : coordinate.longitude;
+
+                    hasPoints = true;
+                }
+            }
+
+            if (hasPoints) {
+                LatLngBounds.Builder builder = new LatLngBounds.Builder();
+                builder.include(new LatLng(maxLat, maxLon));
+                builder.include(new LatLng(minLat, minLon));
+                mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 48));
+            }
+
             mMap.animateCamera(CameraUpdateFactory.zoomBy(14));
 
         // Lyft Integration
