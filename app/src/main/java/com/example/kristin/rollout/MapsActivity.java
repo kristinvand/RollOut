@@ -175,7 +175,6 @@ public class MapsActivity extends FragmentActivity implements
                 mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 48));
             }
 
-            mMap.animateCamera(CameraUpdateFactory.zoomBy(14));
 
         // Lyft Integration
             ApiConfig apiConfig = new ApiConfig.Builder()
