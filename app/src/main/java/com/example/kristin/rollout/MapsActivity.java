@@ -13,12 +13,14 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 
+import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.kristin.rollout.directionhelpers.JSONParser;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.location.LocationListener;
 
@@ -58,7 +60,8 @@ import java.util.List;
 import com.example.kristin.rollout.directionhelpers.FetchURL;
 import com.example.kristin.rollout.directionhelpers.TaskLoadedCallback;
 
-
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MapsActivity extends FragmentActivity implements
         OnMapReadyCallback,
@@ -72,6 +75,8 @@ public class MapsActivity extends FragmentActivity implements
     private LocationRequest locationRequest;
     private Location lastLocation;
     private Marker currentUserLocationMarker;
+    private FetchURL fetchURL;
+    private JSONParser jsonParser;
     private LatLng latLng;
     double dropoff_lat;
     double dropoff_lng;
@@ -151,30 +156,36 @@ public class MapsActivity extends FragmentActivity implements
             String url = getUrl(pickup_marker.getPosition(), dropoff_marker.getPosition(), "driving");
             new FetchURL(this).execute(url, "driving");
 
-            boolean hasPoints = false;
-            Double maxLat = null, minLat = null, minLon = null, maxLon = null;
+            JSONParser jsonParser = new JSONParser();
 
-            if (currentPolyline != null && currentPolyline.getPoints() != null) {
-                List<LatLng> pts = currentPolyline.getPoints();
-                for (LatLng coordinate : pts) {
+            String distance = jsonParser.distance;
 
-                    maxLat = maxLat != null ? Math.max(coordinate.latitude, maxLat) : coordinate.latitude;
-                    minLat = minLat != null ? Math.min(coordinate.latitude, minLat) : coordinate.latitude;
+            Log.d("poopy", "poopymcgee" + distance);
 
-                    maxLon = maxLon != null ? Math.max(coordinate.longitude, maxLon) : coordinate.longitude;
-                    minLon = minLon != null ? Math.min(coordinate.longitude, minLon) : coordinate.longitude;
 
-                    hasPoints = true;
+
+
+        // Configuring Camera Bounds
+                boolean hasPoints = false;
+                Double maxLat = null, minLat = null, minLon = null, maxLon = null;
+                if (currentPolyline != null && currentPolyline.getPoints() != null) {
+                    List<LatLng> pts = currentPolyline.getPoints();
+                    for (LatLng coordinate : pts) {
+
+                        maxLat = maxLat != null ? Math.max(coordinate.latitude, maxLat) : coordinate.latitude;
+                        minLat = minLat != null ? Math.min(coordinate.latitude, minLat) : coordinate.latitude;
+                        maxLon = maxLon != null ? Math.max(coordinate.longitude, maxLon) : coordinate.longitude;
+                        minLon = minLon != null ? Math.min(coordinate.longitude, minLon) : coordinate.longitude;
+                        hasPoints = true;
+                    }
                 }
-            }
 
-            if (hasPoints) {
-                LatLngBounds.Builder builder = new LatLngBounds.Builder();
-                builder.include(new LatLng(maxLat, maxLon));
-                builder.include(new LatLng(minLat, minLon));
-                mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 48));
-            }
-
+                if (hasPoints) {
+                    LatLngBounds.Builder builder = new LatLngBounds.Builder();
+                    builder.include(new LatLng(maxLat, maxLon));
+                    builder.include(new LatLng(minLat, minLon));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 48));
+                }
 
         // Lyft Integration
             ApiConfig apiConfig = new ApiConfig.Builder()
@@ -230,7 +241,6 @@ public class MapsActivity extends FragmentActivity implements
         return url;
     }
 
-
     // 'Where To' Click
     public void textInputButton(View v) {
         dropoff_location = findViewById(R.id.dropoff_location);
@@ -246,7 +256,7 @@ public class MapsActivity extends FragmentActivity implements
     }
 
     // Calculate Price Click
-    public void priceCalculateButton(View v) throws IOException {
+    public void priceCalculateButton(View v) throws IOException, JSONException {
         uber_button = findViewById(R.id.uber_button);
         lyft_button = findViewById(R.id.lyft_button);
         uber_button.setVisibility(View.VISIBLE);
@@ -361,8 +371,6 @@ public class MapsActivity extends FragmentActivity implements
         }
     }
 
-
-
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         locationRequest = new LocationRequest();
@@ -388,12 +396,13 @@ public class MapsActivity extends FragmentActivity implements
 
     }
 
-
     @Override
     public void onTaskDone(Object... values) {
         if(currentPolyline != null){
             currentPolyline.remove();
         }
         currentPolyline = mMap.addPolyline((PolylineOptions)values[0]);
+
     }
+
 }
