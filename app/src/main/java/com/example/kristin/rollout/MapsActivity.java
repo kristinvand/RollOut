@@ -156,14 +156,6 @@ public class MapsActivity extends FragmentActivity implements
             String url = getUrl(pickup_marker.getPosition(), dropoff_marker.getPosition(), "driving");
             new FetchURL(this).execute(url, "driving");
 
-            JSONParser jsonParser = new JSONParser();
-
-            String distance = jsonParser.distance;
-
-            Log.d("poopy", "poopymcgee" + distance);
-
-
-
 
         // Configuring Camera Bounds
                 boolean hasPoints = false;
@@ -205,7 +197,6 @@ public class MapsActivity extends FragmentActivity implements
             lyftButton.load();
 
 
-
         // Uber Integration
             RideRequestButton requestButton = new RideRequestButton(this);
             UberButton uberButton = findViewById(R.id.uber_button);
@@ -227,7 +218,23 @@ public class MapsActivity extends FragmentActivity implements
             requestButton.setSession(session);
             requestButton.loadRideInformation();
 
-        Toast.makeText(this,"reached this point", Toast.LENGTH_LONG).show();
+        // Cab Integration
+
+            JSONParser jsonParser = new JSONParser();
+
+            String distance = jsonParser.distance;
+            String duration = jsonParser.duration;
+
+            distance = distance.replace(" mi", "");
+            duration = duration.replace(" mins", "");
+
+            float distance_float = Float.valueOf(distance);
+            float duration_float = Float.valueOf(duration);
+
+            double cabFare = (3.75 + .25 * ((duration_float * 60) / 33) + 2.00 * (distance_float));
+
+            cabFare = Math.round(cabFare * 100.0) / 100.0;
+
 
     }
 

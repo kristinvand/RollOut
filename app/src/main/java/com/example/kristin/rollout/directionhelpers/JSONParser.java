@@ -4,16 +4,21 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.Array;
+
 
 public class JSONParser {
 
     public static String distance = "";
-    
-    public String parse(JSONObject jObject) {
+    public static String duration = "";
+    public static String[] resultArray = new String[2];
+
+    public String[] parse(JSONObject jObject) {
 
         JSONArray jRoutes;
         JSONArray jLegs;
         JSONObject jDistance;
+        JSONObject jDuration;
         try {
             jRoutes = jObject.getJSONArray("routes");
             /** Traversing all routes */
@@ -25,7 +30,11 @@ public class JSONParser {
                     // Find Distance Within Legs
                     JSONObject getJsonObject = jLegs.getJSONObject(j);
                     jDistance = getJsonObject.getJSONObject("distance");
+                    jDuration = getJsonObject.getJSONObject("duration");
+                    duration = jDuration.get("text").toString();
                     distance = jDistance.get("text").toString();
+                    resultArray[0] = distance;
+                    resultArray[1] = duration;
                 }
             }
 
@@ -33,6 +42,6 @@ public class JSONParser {
             e.printStackTrace();
         } catch (Exception e) {
         }
-        return distance;
+        return resultArray;
     }
 }

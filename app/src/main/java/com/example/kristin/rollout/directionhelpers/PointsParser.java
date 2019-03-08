@@ -46,7 +46,7 @@ public class PointsParser extends AsyncTask<String, Integer, List<List<HashMap<S
             Log.d("mylog", routes.toString());
 
             // Starts parsing distance data
-            distance = jsonParser.parse(jObject);
+            distance = jsonParser.parse(jObject)[0];
             Log.d("distance object", distance);
 
 
