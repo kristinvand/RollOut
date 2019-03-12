@@ -17,6 +17,8 @@ import java.util.List;
 public class PointsParser extends AsyncTask<String, Integer, List<List<HashMap<String, String>>>> {
     TaskLoadedCallback taskCallback;
     String directionMode = "driving";
+    public static String distance = "";
+
 
     public PointsParser(Context mContext, String directionMode) {
         this.taskCallback = (TaskLoadedCallback) mContext;
@@ -28,18 +30,25 @@ public class PointsParser extends AsyncTask<String, Integer, List<List<HashMap<S
     protected List<List<HashMap<String, String>>> doInBackground(String... jsonData) {
 
         JSONObject jObject;
+        String distance;
         List<List<HashMap<String, String>>> routes = null;
 
         try {
             jObject = new JSONObject(jsonData[0]);
-            Log.d("mylog", jsonData[0].toString());
+            Log.d("stringjson", jsonData[0]);
             DataParser parser = new DataParser();
+            JSONParser jsonParser = new JSONParser();
             Log.d("mylog", parser.toString());
 
-            // Starts parsing data
+            // Starts parsing route data
             routes = parser.parse(jObject);
             Log.d("mylog", "Executing routes");
             Log.d("mylog", routes.toString());
+
+            // Starts parsing distance data
+            distance = jsonParser.parse(jObject)[0];
+            Log.d("distance object", distance);
+
 
         } catch (Exception e) {
             Log.d("mylog", e.toString());

@@ -14,15 +14,16 @@ import java.net.URL;
 public class FetchURL extends AsyncTask<String, Void, String> {
     Context mContext;
     String directionMode = "driving";
+    public static String data = "";
+
 
     public FetchURL(Context mContext) {
         this.mContext = mContext;
     }
 
     @Override
-    protected String doInBackground(String... strings) {
+    public String doInBackground(String... strings) {
         // For storing data from web service
-        String data = "";
         directionMode = strings[1];
         try {
             // Fetching the data from web service
@@ -43,7 +44,6 @@ public class FetchURL extends AsyncTask<String, Void, String> {
     }
 
     private String downloadUrl(String strUrl) throws IOException {
-        String data = "";
         InputStream iStream = null;
         HttpURLConnection urlConnection = null;
         try {
@@ -61,7 +61,7 @@ public class FetchURL extends AsyncTask<String, Void, String> {
                 sb.append(line);
             }
             data = sb.toString();
-            Log.d("mylog", "Downloaded URL: " + data.toString());
+            Log.d("mylog", "Downloaded URL: " + data);
             br.close();
         } catch (Exception e) {
             Log.d("mylog", "Exception downloading URL: " + e.toString());

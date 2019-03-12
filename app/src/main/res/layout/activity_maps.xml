@@ -34,6 +34,7 @@
         android:layout_marginRight="8dp"
         android:layout_marginBottom="8dp"
         android:background="#FFFFFF"
+        android:focusableInTouchMode="true"
         android:clickable="true"
         android:elevation="10dp"
         android:ems="10"
@@ -85,6 +86,7 @@
         android:layout_marginBottom="8dp"
         android:elevation="10dp"
         android:background="@color/black"
+        android:focusableInTouchMode="true"
         android:clickable="true"
         android:onClick="priceCalculateButton"
         android:text="Calculate Price"
@@ -98,7 +100,7 @@
 
     <com.lyft.lyftbutton.LyftButton
         android:id="@+id/lyft_button"
-        android:layout_width="423dp"
+        android:layout_width="410dp"
         android:layout_height="55dp"
         android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@+id/uber_button"
@@ -111,7 +113,7 @@
 
     <com.uber.sdk.android.rides.RideRequestButton
         android:id="@+id/uber_button"
-        android:layout_width="415dp"
+        android:layout_width="420dp"
         android:layout_height="55dp"
         android:layout_below="@id/map"
         android:visibility="invisible"
@@ -120,6 +122,50 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/map"
         app:layout_constraintVertical_bias="1.0"></com.uber.sdk.android.rides.RideRequestButton>
+
+    <TextView
+        android:id="@+id/cab_fare"
+        android:layout_width="97dp"
+        android:layout_height="55dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:textAlignment="center"
+        android:textColor="@color/black"
+        android:textSize="18sp"
+        android:translationZ="5dp"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="@+id/cab_button"
+        app:layout_constraintEnd_toEndOf="@+id/cab_button"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0" />
+    />
+
+    <Button
+        android:id="@+id/cab_button"
+        android:layout_width="411dp"
+        android:layout_height="55dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginRight="8dp"
+        android:background="@color/white"
+        android:paddingLeft="20px"
+        android:text="Take A Cab"
+        android:clickable="true"
+        android:onClick="callCab"
+        android:textAlignment="textStart"
+        android:textSize="14sp"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toTopOf="@+id/lyft_button"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/map"
+        app:layout_constraintVertical_bias="1.0" />
 
 
 </android.support.constraint.ConstraintLayout>

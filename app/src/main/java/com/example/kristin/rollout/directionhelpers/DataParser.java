@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 
 public class DataParser {
+
     public List<List<HashMap<String, String>>> parse(JSONObject jObject) {
 
         List<List<HashMap<String, String>>> routes = new ArrayList<>();
@@ -26,13 +27,11 @@ public class DataParser {
                 /** Traversing all legs */
                 for (int j = 0; j < jLegs.length(); j++) {
                     jSteps = ((JSONObject) jLegs.get(j)).getJSONArray("steps");
-
                     /** Traversing all steps */
                     for (int k = 0; k < jSteps.length(); k++) {
                         String polyline = "";
                         polyline = (String) ((JSONObject) ((JSONObject) jSteps.get(k)).get("polyline")).get("points");
                         List<LatLng> list = decodePoly(polyline);
-
                         /** Traversing all points */
                         for (int l = 0; l < list.size(); l++) {
                             HashMap<String, String> hm = new HashMap<>();
@@ -53,10 +52,6 @@ public class DataParser {
     }
 
 
-    /**
-     * Method to decode polyline points
-     * Courtesy : https://jeffreysambells.com/2010/05/27/decoding-polylines-from-google-maps-direction-api-with-java
-     */
     private List<LatLng> decodePoly(String encoded) {
 
         List<LatLng> poly = new ArrayList<>();
