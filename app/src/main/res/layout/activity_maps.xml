@@ -34,6 +34,7 @@
         android:layout_marginRight="8dp"
         android:layout_marginBottom="8dp"
         android:background="#FFFFFF"
+        android:focusableInTouchMode="true"
         android:clickable="true"
         android:elevation="10dp"
         android:ems="10"
@@ -85,6 +86,7 @@
         android:layout_marginBottom="8dp"
         android:elevation="10dp"
         android:background="@color/black"
+        android:focusableInTouchMode="true"
         android:clickable="true"
         android:onClick="priceCalculateButton"
         android:text="Calculate Price"
@@ -98,7 +100,7 @@
 
     <com.lyft.lyftbutton.LyftButton
         android:id="@+id/lyft_button"
-        android:layout_width="420dp"
+        android:layout_width="410dp"
         android:layout_height="55dp"
         android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@+id/uber_button"
@@ -154,6 +156,8 @@
         android:background="@color/white"
         android:paddingLeft="20px"
         android:text="Take A Cab"
+        android:clickable="true"
+        android:onClick="callCab"
         android:textAlignment="textStart"
         android:textSize="14sp"
         android:visibility="invisible"
