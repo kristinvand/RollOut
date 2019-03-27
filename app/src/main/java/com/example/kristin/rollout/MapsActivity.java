@@ -189,7 +189,7 @@ public class MapsActivity extends FragmentActivity implements
 
         lyftRide();
         uberRide();
-        cabRide();
+        // cabRide();
     }
 
     public void uberRide() {
@@ -384,6 +384,7 @@ public class MapsActivity extends FragmentActivity implements
     }
 
 
+    // Where Location is Being Updated
     @Override
     public void onLocationChanged(Location location) {
 
