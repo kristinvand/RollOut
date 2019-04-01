@@ -53,6 +53,7 @@ import com.uber.sdk.rides.client.error.ApiError;
 
 import com.lyft.networking.ApiConfig;
 
+import com.google.firebase.firestone.Geopoint;
 
 public class MapsActivity extends FragmentActivity implements
         OnMapReadyCallback,
@@ -66,6 +67,7 @@ public class MapsActivity extends FragmentActivity implements
     private Location lastLocation;
     private Marker currentUserLocationMarker;
     private LatLng latLng;
+    private UserLocation mUserLocation; // Dude in video sets this up in a "models" folder. Not sure what our equivalent to that is
     TextView dropoff_location;
     TextView pickup_location;
     TextView calculate_button;
@@ -73,6 +75,76 @@ public class MapsActivity extends FragmentActivity implements
     com.lyft.lyftbutton.LyftButton lyft_button;
 
     private static final int Request_User_Location_Code = 99;
+
+
+
+    // Next 3 fucntions deal with saving user coords in our database
+    // However, the tutorial went into a package where some constructors, getters, and setters are established
+    // I don't know what our equivalent is to this. Are we just doing it in MapsActivity?
+    private void getUserDetails(){
+        if mUserLocation == null){
+            mUserLocation = new UserLocation();
+
+            DocumentReference userRef = mDb.collection(getString(R.string.collection_users)) //referencing collection of users
+                    .document(FirebaseAuth.getInstance().getUid());
+
+            userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                @Override
+                public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                   if (task.isSuccessful()){
+                       Log.d(TAG, msg: "Got User's Details.");
+
+                       Useer user = task.getResult().toObject(User.class);
+                       mUserLocation.setUser(user);
+                       getLastKnownLocation();
+                }
+
+            });
+        }
+    }
+
+    private void saveUserLocation(){ // adding models 'package' with this? Creates a UserLocation Class
+        if (mUserLocation != null){ //uploads to Firestore
+            mdb = FirebaseFirestorm.getInstance(); //instantiate firestorm reference
+            DocumentReference locationRef = mDb.
+                    collection(getString(R.string.collection_user_location)) // refernece the collection
+                    .document(FirebaseAuth.getInstance().getUid()); // document identified by id
+
+            locationRef.set(mUserLocation).addOnCompleteListener(new OnCompleteListener<Void>) {
+                @Override
+                public void onComplete(@NonNull Task<Void> task) {
+                    if(task.isSuccessful()) {
+                        Log.d(TAG, msg: "saveUserLocation: \nuser location stored in database." +
+                                        "\n lat: " + mUserLocation.getGeo_point().getLatitude() +
+                                        "\n lon: " +mUserLocation.getGeo_point().getLongitude());
+                    }
+                }
+            }
+        }
+    }
+
+    private void getLastKnownLocation() { // Gets long, lat of user and puts timestamp on it
+        Log.d(TAG, msg:"GetLastKnownLocation called");
+        if (ActivityCompat.checkSelfPermission(context: this, Manifest.permission.ACCESS_FINE_LOCATION) !=PackageManager.PERMISSION)
+        return;
+        }
+
+        mFusedLocationClient.getLastLocation().addOnCompleteListener(new OnCompleteListener<android.location.Location>()) {
+            @Override
+            public void onComplete(@NonNull Task<android.location.Location> task) {
+                if (task.isSuccessful()) {
+                    Location location = task.getResult();
+                    GeoPoint geopoint = new GeoPoint(location.getLatitiude(), location.getLongitude());
+                    log.d(TAG, msg: "onComplete: latitude: " + geoPoint.getLatitude());
+                    log.d(TAG, msg: "onComplete: longitude: " + geoPoint.getLongitude());
+
+                    mUserLocation.setGeo_point)geoPoint);
+                    mUserLocation.Timestamp(null);
+                    saveUserLocation();
+                }
+            }
+        });
+    }
 
 
     @Override
@@ -124,6 +196,14 @@ public class MapsActivity extends FragmentActivity implements
                 .setServerToken("ocXTg92LK-TjXCLC97lTJPly6WHyAbFbTdPnp1dV")
                 //.setRedirectUri("<REDIRECT_URI>")
                 .build();
+
+        // Cab Integration
+        // (3.75) + (0.25 * (timeItTakesInMin * 1/3)) + (2 * distanceInMiles)
+        int distBetween;
+        int CabCost;
+
+        distBetween = SphericalUtil.computeDistanceBetween(latLngFrom, latLngTo)
+        CabCost = (3.75) + (0.25 * (timetittakes * 1/3)) + (2 * distBetween)
 
         ServerTokenSession session = new ServerTokenSession(config);
 
