@@ -6,9 +6,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
-import android.provider.SyncStateContract;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -16,11 +16,9 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 
-import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,6 +32,7 @@ import android.location.Geocoder;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -59,7 +58,6 @@ import com.uber.sdk.rides.client.ServerTokenSession;
 import com.lyft.networking.ApiConfig;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.example.kristin.rollout.directionhelpers.FetchURL;
@@ -74,29 +72,42 @@ public class MapsActivity extends FragmentActivity implements
         LocationListener {
 
     private GoogleMap mMap;
+    private LocationManager locationManager;
+    private static final long MIN_TIME = 400;
+    private static final float MIN_DISTANCE = 1000;
     private GoogleApiClient googleApiClient;
     private LocationRequest locationRequest;
     private Location lastLocation;
     private Marker currentUserLocationMarker;
     private FetchURL fetchURL;
     private JSONParser jsonParser;
-    private LatLng latLng;
-    double dropoff_lat;
-    double dropoff_lng;
-    double pickup_lat;
-    double pickup_lng;
+
+    private LatLng currentLocationLongitudeLatitude;
+    double currentLongitude;
+    double currentLatitude;
+    double dropoffLatitude;
+    double dropoffLongitude;
+    double pickupLatitude;
+    double pickupLongitude;
+    String pickupAddressString;
+    Address dropoffAddress;
+    Address pickupAddress;
+
     double cabFare;
     String cabFare_string;
-    Double maxLat = null, minLat = null, minLon = null, maxLon = null;
-    MarkerOptions dropoff_marker, pickup_marker;
-    Polyline currentPolyline;
-    TextView dropoff_location;
-    TextView pickup_location;
-    TextView calculate_button;
-    com.uber.sdk.android.rides.RideRequestButton uber_button;
-    com.lyft.lyftbutton.LyftButton lyft_button;
     Button cab_button;
     TextView cab_fare;
+
+    MarkerOptions dropoff_marker, pickup_marker;
+    Polyline currentPolyline;
+
+    TextView dropoffLocationTextView;
+    TextView pickupLocationTextView;
+    TextView calculate_button;
+
+    com.uber.sdk.android.rides.RideRequestButton uber_button;
+    com.lyft.lyftbutton.LyftButton lyft_button;
+
 
     private static final int Request_User_Location_Code = 99;
 
@@ -111,60 +122,59 @@ public class MapsActivity extends FragmentActivity implements
             checkUserLocationPermission();
         }
 
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
 
     }
 
     public void getInput() throws IOException {
 
-        Geocoder coder = new Geocoder(this);
+        // Gets Text (Pickup and Dropoff Location) from Text View
+        String dropoffLocationString = dropoffLocationTextView.getText().toString();
+        String pickupLocationString = pickupLocationTextView.getText().toString();
 
         // Geocodes Input into Address
-        List<Address> dropoff_address;
-        List<Address> pickup_address;
+        List<Address> dropoffList;
+        List<Address> pickupList;
 
-        // Fills in Current Location with User's Location
-        pickup_lat = latLng.latitude;
-        pickup_lng = latLng.longitude;
-        pickup_address = coder.getFromLocation(pickup_lat, pickup_lng, 1);
-        Address pickup_location = pickup_address.get(0);
+        Geocoder coder = new Geocoder(this);
+
+        dropoffList = coder.getFromLocationName(dropoffLocationString, 1);
+        pickupList = coder.getFromLocationName(pickupLocationString, 1);
+
+        dropoffAddress = dropoffList.get(0);
+        pickupAddress = pickupList.get(0);
+
+        dropoffLatitude = dropoffAddress.getLatitude();
+        dropoffLongitude = dropoffAddress.getLongitude();
+
+        pickupLatitude = pickupAddress.getLatitude();
+        pickupLongitude = pickupAddress.getLongitude();
 
 
-        EditText pickup_location_input = findViewById(R.id.pickup_location);
-        String pickup_location_text = pickup_location_input.getText().toString();
-
-        // Gets User's Inputted Information
-        EditText dropoff_location_input = findViewById(R.id.dropoff_location);
-        String dropoff_location_text = dropoff_location_input.getText().toString();
+        createRide();
 
 
-        dropoff_address = coder.getFromLocationName(dropoff_location_text, 1);
-        pickup_address = coder.getFromLocationName(pickup_location_text, 1);
+    }
 
-        Address dropoff_location = dropoff_address.get(0);
-        pickup_location = pickup_address.get(0);
-
-        dropoff_lat = dropoff_location.getLatitude();
-        dropoff_lng = dropoff_location.getLongitude();
-
-        pickup_lat = pickup_location.getLatitude();
-        pickup_lng = pickup_location.getLongitude();
+    public void cameraBounds(){
 
         // Map Configurations
-        pickup_marker = new MarkerOptions().position(new LatLng(pickup_lat, pickup_lng)).title("Pick Up");
-        dropoff_marker = new MarkerOptions().position(new LatLng(dropoff_lat, dropoff_lng)).title("Drop Off");
+        pickup_marker = new MarkerOptions().position(new LatLng(pickupLatitude, pickupLongitude)).title("Pick Up");
+        dropoff_marker = new MarkerOptions().position(new LatLng(dropoffLatitude, dropoffLongitude)).title("Drop Off");
         pickup_marker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE));
 
         mMap.addMarker(pickup_marker);
         mMap.addMarker(dropoff_marker);
 
-        latLng = new LatLng(pickup_location.getLatitude(), pickup_location.getLongitude());
+        currentLocationLongitudeLatitude = new LatLng(pickupAddress.getLatitude(), pickupAddress.getLongitude());
 
         String url = getUrl(pickup_marker.getPosition(), dropoff_marker.getPosition(), "driving");
         new FetchURL(this).execute(url, "driving");
-
 
         // Configuring Camera Bounds
         boolean hasPoints = false;
@@ -188,14 +198,13 @@ public class MapsActivity extends FragmentActivity implements
             mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 48));
         }
 
-        createRide();
     }
 
     public void createRide() {
 
         lyftRide();
         uberRide();
-        //cabRide();
+        // cabRide();
     }
 
     public void uberRide() {
@@ -204,8 +213,8 @@ public class MapsActivity extends FragmentActivity implements
         UberButton uberButton = findViewById(R.id.uber_button);
 
         RideParameters rideParams = new RideParameters.Builder()
-                .setPickupLocation(pickup_lat, pickup_lng, "", "")
-                .setDropoffLocation(dropoff_lat, dropoff_lng, "", "")
+                .setPickupLocation(pickupLatitude, pickupLongitude, "", "")
+                .setDropoffLocation(dropoffLatitude, dropoffLongitude, "", "")
                 .setProductId("a1111c8c-c720-46c3-8534-2fcdd730040d")
                 .build();
 
@@ -232,8 +241,8 @@ public class MapsActivity extends FragmentActivity implements
         lyftButton.setApiConfig(apiConfig);
 
         RideParams.Builder rideParamsBuilder = new RideParams.Builder()
-                .setPickupLocation(pickup_lat, pickup_lng)
-                .setDropoffLocation(dropoff_lat, dropoff_lng);
+                .setPickupLocation(pickupLatitude, pickupLongitude)
+                .setDropoffLocation(dropoffLatitude, dropoffLongitude);
         rideParamsBuilder.setRideTypeEnum(RideTypeEnum.CLASSIC);
 
         lyftButton.setRideParams(rideParamsBuilder.build());
@@ -273,29 +282,31 @@ public class MapsActivity extends FragmentActivity implements
 
     // 'Where To' Click
     public void textInputButton(View v) throws IOException {
-        dropoff_location = findViewById(R.id.dropoff_location);
-        pickup_location = findViewById(R.id.pickup_location);
+        dropoffLocationTextView = findViewById(R.id.dropoff_location);
+        pickupLocationTextView = findViewById(R.id.pickup_location);
         calculate_button = findViewById(R.id.price_calculate);
-        dropoff_location.setY(250);
-        dropoff_location.setTextAlignment(2);
-        dropoff_location.setPadding(50, 0, 0, 0);
-        pickup_location.setVisibility(View.VISIBLE);
-        pickup_location.setPadding(50, 0, 0, 0);
+        dropoffLocationTextView.setY(250);
+        dropoffLocationTextView.setTextAlignment(2);
+        dropoffLocationTextView.setPadding(50, 0, 0, 0);
+        pickupLocationTextView.setVisibility(View.VISIBLE);
+        pickupLocationTextView.setPadding(50, 0, 0, 0);
         calculate_button.setVisibility(View.VISIBLE);
 
 
         Geocoder coder = new Geocoder(this);
 
-        List<Address> pickup_address;
+        List<Address> currentLocationList;
 
-        pickup_lat = latLng.latitude;
-        pickup_lng = latLng.longitude;
+        currentLatitude = currentLocationLongitudeLatitude.latitude;
+        currentLongitude = currentLocationLongitudeLatitude.longitude;
 
-        pickup_address = coder.getFromLocation(pickup_lat, pickup_lng, 1);
+        currentLocationList = coder.getFromLocation(currentLatitude, currentLongitude, 1);
 
-        Address pickup_location_geocoder = pickup_address.get(0);
+        Address currentLocationAddress = currentLocationList.get(0);
 
-        pickup_location.setText(pickup_location_geocoder.getAddressLine(0));
+        pickupAddressString = currentLocationAddress.getAddressLine(0);
+
+        pickupLocationTextView.setText(pickupAddressString);
 
     }
 
@@ -313,6 +324,7 @@ public class MapsActivity extends FragmentActivity implements
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
         getInput();
+        cameraBounds();
     }
 
     public void callCab(View v) {
@@ -415,16 +427,17 @@ public class MapsActivity extends FragmentActivity implements
             currentUserLocationMarker.remove();
         }
 
-        latLng = new LatLng(location.getLatitude(), location.getLongitude());
+        currentLocationLongitudeLatitude = new LatLng(location.getLatitude(), location.getLongitude());
 
         MarkerOptions markerOptions = new MarkerOptions();
-        markerOptions.position(latLng);
+        markerOptions.position(currentLocationLongitudeLatitude);
         markerOptions.title("User Current Location");
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE));
 
         currentUserLocationMarker = mMap.addMarker(markerOptions);
 
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocationLongitudeLatitude));
         mMap.animateCamera(CameraUpdateFactory.zoomBy(14));
 
         if(googleApiClient != null)
