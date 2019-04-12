@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
+import android.provider.SyncStateContract;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -15,6 +16,7 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 
+import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -57,6 +59,7 @@ import com.uber.sdk.rides.client.ServerTokenSession;
 import com.lyft.networking.ApiConfig;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.example.kristin.rollout.directionhelpers.FetchURL;
@@ -116,35 +119,38 @@ public class MapsActivity extends FragmentActivity implements
 
     public void getInput() throws IOException {
 
-        // Gets User's Inputted Information
-        EditText dropoff_location_input = findViewById(R.id.dropoff_location);
-        String dropoff_location_text = dropoff_location_input.getText().toString();
-        EditText pickup_location_input = findViewById(R.id.pickup_location);
-        String pickup_location_text = pickup_location_input.getText().toString();
+        Geocoder coder = new Geocoder(this);
 
         // Geocodes Input into Address
         List<Address> dropoff_address;
         List<Address> pickup_address;
 
-        Geocoder coder = new Geocoder(this);
+        // Fills in Current Location with User's Location
+        pickup_lat = latLng.latitude;
+        pickup_lng = latLng.longitude;
+        pickup_address = coder.getFromLocation(pickup_lat, pickup_lng, 1);
+        Address pickup_location = pickup_address.get(0);
+
+
+        EditText pickup_location_input = findViewById(R.id.pickup_location);
+        String pickup_location_text = pickup_location_input.getText().toString();
+
+        // Gets User's Inputted Information
+        EditText dropoff_location_input = findViewById(R.id.dropoff_location);
+        String dropoff_location_text = dropoff_location_input.getText().toString();
+
 
         dropoff_address = coder.getFromLocationName(dropoff_location_text, 1);
         pickup_address = coder.getFromLocationName(pickup_location_text, 1);
 
         Address dropoff_location = dropoff_address.get(0);
-        Address pickup_location = pickup_address.get(0);
+        pickup_location = pickup_address.get(0);
 
         dropoff_lat = dropoff_location.getLatitude();
         dropoff_lng = dropoff_location.getLongitude();
 
         pickup_lat = pickup_location.getLatitude();
         pickup_lng = pickup_location.getLongitude();
-
-        if (pickup_location_input == null) {
-            pickup_lat = latLng.latitude;
-            pickup_lng = latLng.longitude;
-            pickup_address = coder.getFromLocation(pickup_lat, pickup_lng, 1);
-        }
 
         // Map Configurations
         pickup_marker = new MarkerOptions().position(new LatLng(pickup_lat, pickup_lng)).title("Pick Up");
@@ -189,7 +195,7 @@ public class MapsActivity extends FragmentActivity implements
 
         lyftRide();
         uberRide();
-        // cabRide();
+        //cabRide();
     }
 
     public void uberRide() {
@@ -266,7 +272,7 @@ public class MapsActivity extends FragmentActivity implements
     }
 
     // 'Where To' Click
-    public void textInputButton(View v) {
+    public void textInputButton(View v) throws IOException {
         dropoff_location = findViewById(R.id.dropoff_location);
         pickup_location = findViewById(R.id.pickup_location);
         calculate_button = findViewById(R.id.price_calculate);
@@ -276,6 +282,20 @@ public class MapsActivity extends FragmentActivity implements
         pickup_location.setVisibility(View.VISIBLE);
         pickup_location.setPadding(50, 0, 0, 0);
         calculate_button.setVisibility(View.VISIBLE);
+
+
+        Geocoder coder = new Geocoder(this);
+
+        List<Address> pickup_address;
+
+        pickup_lat = latLng.latitude;
+        pickup_lng = latLng.longitude;
+
+        pickup_address = coder.getFromLocation(pickup_lat, pickup_lng, 1);
+
+        Address pickup_location_geocoder = pickup_address.get(0);
+
+        pickup_location.setText(pickup_location_geocoder.getAddressLine(0));
 
     }
 
