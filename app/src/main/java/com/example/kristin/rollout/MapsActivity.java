@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.NonNull;
@@ -18,7 +19,6 @@ import android.support.v4.content.ContextCompat;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,6 +32,7 @@ import android.location.Geocoder;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -71,6 +72,9 @@ public class MapsActivity extends FragmentActivity implements
         LocationListener {
 
     private GoogleMap mMap;
+    private LocationManager locationManager;
+    private static final long MIN_TIME = 400;
+    private static final float MIN_DISTANCE = 1000;
     private GoogleApiClient googleApiClient;
     private LocationRequest locationRequest;
     private Location lastLocation;
@@ -78,7 +82,9 @@ public class MapsActivity extends FragmentActivity implements
     private FetchURL fetchURL;
     private JSONParser jsonParser;
 
-    private LatLng latLng;
+    private LatLng currentLocationLongitudeLatitude;
+    double currentLongitude;
+    double currentLatitude;
     double dropoffLatitude;
     double dropoffLongitude;
     double pickupLatitude;
@@ -116,9 +122,12 @@ public class MapsActivity extends FragmentActivity implements
             checkUserLocationPermission();
         }
 
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
 
     }
 
@@ -162,7 +171,7 @@ public class MapsActivity extends FragmentActivity implements
         mMap.addMarker(pickup_marker);
         mMap.addMarker(dropoff_marker);
 
-        latLng = new LatLng(pickupAddress.getLatitude(), pickupAddress.getLongitude());
+        currentLocationLongitudeLatitude = new LatLng(pickupAddress.getLatitude(), pickupAddress.getLongitude());
 
         String url = getUrl(pickup_marker.getPosition(), dropoff_marker.getPosition(), "driving");
         new FetchURL(this).execute(url, "driving");
@@ -272,7 +281,7 @@ public class MapsActivity extends FragmentActivity implements
     }
 
     // 'Where To' Click
-    public void textInputButton(View v) {
+    public void textInputButton(View v) throws IOException {
         dropoffLocationTextView = findViewById(R.id.dropoff_location);
         pickupLocationTextView = findViewById(R.id.pickup_location);
         calculate_button = findViewById(R.id.price_calculate);
@@ -282,6 +291,20 @@ public class MapsActivity extends FragmentActivity implements
         pickupLocationTextView.setVisibility(View.VISIBLE);
         pickupLocationTextView.setPadding(50, 0, 0, 0);
         calculate_button.setVisibility(View.VISIBLE);
+
+
+        Geocoder coder = new Geocoder(this);
+
+        List<Address> currentLocationList;
+
+        currentLatitude = currentLocationLongitudeLatitude.latitude;
+        currentLongitude = currentLocationLongitudeLatitude.longitude;
+
+        currentLocationList = coder.getFromLocation(currentLatitude, currentLongitude, 1);
+
+        Address currentLocationAddress = currentLocationList.get(0);
+
+        pickupAddressString = currentLocationAddress.getAddressLine(0);
 
         pickupLocationTextView.setText(pickupAddressString);
 
@@ -404,16 +427,17 @@ public class MapsActivity extends FragmentActivity implements
             currentUserLocationMarker.remove();
         }
 
-        latLng = new LatLng(location.getLatitude(), location.getLongitude());
+        currentLocationLongitudeLatitude = new LatLng(location.getLatitude(), location.getLongitude());
 
         MarkerOptions markerOptions = new MarkerOptions();
-        markerOptions.position(latLng);
+        markerOptions.position(currentLocationLongitudeLatitude);
         markerOptions.title("User Current Location");
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ROSE));
 
         currentUserLocationMarker = mMap.addMarker(markerOptions);
 
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocationLongitudeLatitude));
         mMap.animateCamera(CameraUpdateFactory.zoomBy(14));
 
         if(googleApiClient != null)
