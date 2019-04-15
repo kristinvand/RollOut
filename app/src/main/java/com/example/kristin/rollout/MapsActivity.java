@@ -43,10 +43,18 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+
 import com.lyft.lyftbutton.LyftButton;
 import com.lyft.lyftbutton.RideParams;
 import com.lyft.lyftbutton.RideTypeEnum;
@@ -90,6 +98,11 @@ public class MapsActivity extends FragmentActivity implements
     Address dropoffAddress;
     Address pickupAddress;
 
+    final LoginActivity loginActivity = new LoginActivity();
+    String userUsername = loginActivity.userUsername;
+
+    private static final String TAG = "MapsActivity";
+
     double cabFare;
     String cabFare_string;
     Button cab_button;
@@ -107,11 +120,11 @@ public class MapsActivity extends FragmentActivity implements
 
     private static final int Request_User_Location_Code = 99;
 
-    public static final String LOCATION_LONGITUDE = "longitude";
-    public static final String LOCATION_LATITUDE = "latitude";
+    public String LOCATION_LONGITUDE = "longitude";
+    public String LOCATION_LATITUDE = "latitude";
 
-    private DocumentReference mDocRef = FirebaseFirestore.getInstance().collection("RollOutData").document("users");
-
+    public CollectionReference rollOutDatabase = FirebaseFirestore.getInstance().collection("RollOutUsers");
+    public CollectionReference rollOutLocationDatabase = FirebaseFirestore.getInstance().collection("RollOutUserLocations");
 
 
     @Override
@@ -153,7 +166,7 @@ public class MapsActivity extends FragmentActivity implements
         pickupAddressString = currentLocationAddress.getAddressLine(0);
         pickupLocationTextView.setText(pickupAddressString);
 
-        writeToDatabase();
+        locationToDatabase();
 
     }
 
@@ -196,6 +209,8 @@ public class MapsActivity extends FragmentActivity implements
 
         mMap.addMarker(pickup_marker);
         mMap.addMarker(dropoff_marker);
+
+
 
         currentLocationLongitudeLatitude = new LatLng(pickupAddress.getLatitude(), pickupAddress.getLongitude());
 
@@ -339,14 +354,28 @@ public class MapsActivity extends FragmentActivity implements
         return url;
     }
 
-    public void writeToDatabase(){
-        
+    public void locationToDatabase(){
+
         Map<String, Object> userLocation = new HashMap<>();
 
         userLocation.put(LOCATION_LONGITUDE, currentLongitude);
         userLocation.put(LOCATION_LATITUDE, currentLatitude);
 
-        mDocRef.set(userLocation);
+
+        rollOutLocationDatabase.document(userUsername).set(userLocation)
+
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                   public void onSuccess(Void aVoid) {
+                        Log.d("Success", "DocumentSnapshot successfully written!");
+                  }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.d("Failure", "Error writing document", e);
+                    }
+                });
 
     }
 
@@ -442,6 +471,13 @@ public class MapsActivity extends FragmentActivity implements
 
         currentUserLocationMarker = mMap.addMarker(markerOptions);
 
+        MarkerOptions martyMarker = new MarkerOptions().position(new LatLng(39.131800, -84.516840)).title("mcdanich");
+        martyMarker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+        mMap.addMarker(martyMarker);
+
+        MarkerOptions connorMarker = new MarkerOptions().position(new LatLng(39.131794, -84.518396)).title("silvacg");
+        connorMarker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+        mMap.addMarker(connorMarker);
 
         mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocationLongitudeLatitude));
         mMap.animateCamera(CameraUpdateFactory.zoomBy(14));
