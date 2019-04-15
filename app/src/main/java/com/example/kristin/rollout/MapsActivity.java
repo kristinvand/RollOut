@@ -1,12 +1,10 @@
 package com.example.kristin.rollout;
 
-
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.NonNull;
@@ -16,6 +14,7 @@ import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 
+import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -32,7 +31,6 @@ import android.location.Geocoder;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -42,9 +40,20 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import com.lyft.lyftbutton.LyftButton;
 import com.lyft.lyftbutton.RideParams;
@@ -58,7 +67,9 @@ import com.uber.sdk.rides.client.ServerTokenSession;
 import com.lyft.networking.ApiConfig;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.example.kristin.rollout.directionhelpers.FetchURL;
 import com.example.kristin.rollout.directionhelpers.TaskLoadedCallback;
@@ -72,15 +83,9 @@ public class MapsActivity extends FragmentActivity implements
         LocationListener {
 
     private GoogleMap mMap;
-    private LocationManager locationManager;
-    private static final long MIN_TIME = 400;
-    private static final float MIN_DISTANCE = 1000;
     private GoogleApiClient googleApiClient;
     private LocationRequest locationRequest;
-    private Location lastLocation;
     private Marker currentUserLocationMarker;
-    private FetchURL fetchURL;
-    private JSONParser jsonParser;
 
     private LatLng currentLocationLongitudeLatitude;
     double currentLongitude;
@@ -92,6 +97,11 @@ public class MapsActivity extends FragmentActivity implements
     String pickupAddressString;
     Address dropoffAddress;
     Address pickupAddress;
+
+    final LoginActivity loginActivity = new LoginActivity();
+    String userUsername = loginActivity.userUsername;
+
+    private static final String TAG = "MapsActivity";
 
     double cabFare;
     String cabFare_string;
@@ -108,8 +118,13 @@ public class MapsActivity extends FragmentActivity implements
     com.uber.sdk.android.rides.RideRequestButton uber_button;
     com.lyft.lyftbutton.LyftButton lyft_button;
 
-
     private static final int Request_User_Location_Code = 99;
+
+    public String LOCATION_LONGITUDE = "longitude";
+    public String LOCATION_LATITUDE = "latitude";
+
+    public CollectionReference rollOutDatabase = FirebaseFirestore.getInstance().collection("RollOutUsers");
+    public CollectionReference rollOutLocationDatabase = FirebaseFirestore.getInstance().collection("RollOutUserLocations");
 
 
     @Override
@@ -122,12 +137,36 @@ public class MapsActivity extends FragmentActivity implements
             checkUserLocationPermission();
         }
 
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+    }
+
+    // 'Where To' Click
+    public void textInputButton(View v) throws IOException {
+        dropoffLocationTextView = findViewById(R.id.dropoff_location);
+        pickupLocationTextView = findViewById(R.id.pickup_location);
+        calculate_button = findViewById(R.id.price_calculate);
+        dropoffLocationTextView.setY(250);
+        dropoffLocationTextView.setTextAlignment(2);
+        dropoffLocationTextView.setPadding(50, 0, 0, 0);
+        pickupLocationTextView.setVisibility(View.VISIBLE);
+        pickupLocationTextView.setPadding(50, 0, 0, 0);
+        calculate_button.setVisibility(View.VISIBLE);
+
+
+        // Populates Current Location Text Field With Current Location
+        Geocoder coder = new Geocoder(this);
+        List<Address> currentLocationList;
+        currentLatitude = currentLocationLongitudeLatitude.latitude;
+        currentLongitude = currentLocationLongitudeLatitude.longitude;
+        currentLocationList = coder.getFromLocation(currentLatitude, currentLongitude, 1);
+        Address currentLocationAddress = currentLocationList.get(0);
+        pickupAddressString = currentLocationAddress.getAddressLine(0);
+        pickupLocationTextView.setText(pickupAddressString);
+
+        locationToDatabase();
 
     }
 
@@ -171,6 +210,8 @@ public class MapsActivity extends FragmentActivity implements
         mMap.addMarker(pickup_marker);
         mMap.addMarker(dropoff_marker);
 
+
+
         currentLocationLongitudeLatitude = new LatLng(pickupAddress.getLatitude(), pickupAddress.getLongitude());
 
         String url = getUrl(pickup_marker.getPosition(), dropoff_marker.getPosition(), "driving");
@@ -205,6 +246,23 @@ public class MapsActivity extends FragmentActivity implements
         lyftRide();
         uberRide();
         // cabRide();
+    }
+
+    // Calculate Price Click
+    public void priceCalculateButton(View v) throws IOException {
+        uber_button = findViewById(R.id.uber_button);
+        lyft_button = findViewById(R.id.lyft_button);
+        cab_button = findViewById(R.id.cab_button);
+        cab_fare = findViewById(R.id.cab_fare);
+        cab_fare.setText(cabFare_string);
+        cab_fare.setVisibility(View.VISIBLE);
+        cab_button.setVisibility(View.VISIBLE);
+        uber_button.setVisibility(View.VISIBLE);
+        lyft_button.setVisibility(View.VISIBLE);
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+        getInput();
+        cameraBounds();
     }
 
     public void uberRide() {
@@ -270,63 +328,6 @@ public class MapsActivity extends FragmentActivity implements
         cabFare_string = "$" + Double.toString(cabFare);
     }
 
-    private String getUrl(LatLng origin, LatLng dest, String directionMode) {
-        String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
-        String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
-        String mode = "mode=" + directionMode;
-        String parameters = str_origin + "&" + str_dest + "&" + mode;
-        String output = "json";
-        String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters + "&key=" + getString(R.string.google_maps_key);
-        return url;
-    }
-
-    // 'Where To' Click
-    public void textInputButton(View v) throws IOException {
-        dropoffLocationTextView = findViewById(R.id.dropoff_location);
-        pickupLocationTextView = findViewById(R.id.pickup_location);
-        calculate_button = findViewById(R.id.price_calculate);
-        dropoffLocationTextView.setY(250);
-        dropoffLocationTextView.setTextAlignment(2);
-        dropoffLocationTextView.setPadding(50, 0, 0, 0);
-        pickupLocationTextView.setVisibility(View.VISIBLE);
-        pickupLocationTextView.setPadding(50, 0, 0, 0);
-        calculate_button.setVisibility(View.VISIBLE);
-
-
-        Geocoder coder = new Geocoder(this);
-
-        List<Address> currentLocationList;
-
-        currentLatitude = currentLocationLongitudeLatitude.latitude;
-        currentLongitude = currentLocationLongitudeLatitude.longitude;
-
-        currentLocationList = coder.getFromLocation(currentLatitude, currentLongitude, 1);
-
-        Address currentLocationAddress = currentLocationList.get(0);
-
-        pickupAddressString = currentLocationAddress.getAddressLine(0);
-
-        pickupLocationTextView.setText(pickupAddressString);
-
-    }
-
-    // Calculate Price Click
-    public void priceCalculateButton(View v) throws IOException {
-        uber_button = findViewById(R.id.uber_button);
-        lyft_button = findViewById(R.id.lyft_button);
-        cab_button = findViewById(R.id.cab_button);
-        cab_fare = findViewById(R.id.cab_fare);
-        cab_fare.setText(cabFare_string);
-        cab_fare.setVisibility(View.VISIBLE);
-        cab_button.setVisibility(View.VISIBLE);
-        uber_button.setVisibility(View.VISIBLE);
-        lyft_button.setVisibility(View.VISIBLE);
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
-        getInput();
-        cameraBounds();
-    }
-
     public void callCab(View v) {
         Intent callIntent = new Intent(Intent.ACTION_CALL);
         callIntent.setData(Uri.parse("tel:123456789"));
@@ -341,6 +342,41 @@ public class MapsActivity extends FragmentActivity implements
             return;
         }
         startActivity(callIntent);
+    }
+
+    private String getUrl(LatLng origin, LatLng dest, String directionMode) {
+        String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
+        String str_dest = "destination=" + dest.latitude + "," + dest.longitude;
+        String mode = "mode=" + directionMode;
+        String parameters = str_origin + "&" + str_dest + "&" + mode;
+        String output = "json";
+        String url = "https://maps.googleapis.com/maps/api/directions/" + output + "?" + parameters + "&key=" + getString(R.string.google_maps_key);
+        return url;
+    }
+
+    public void locationToDatabase(){
+
+        Map<String, Object> userLocation = new HashMap<>();
+
+        userLocation.put(LOCATION_LONGITUDE, currentLongitude);
+        userLocation.put(LOCATION_LATITUDE, currentLatitude);
+
+
+        rollOutLocationDatabase.document(userUsername).set(userLocation)
+
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                   public void onSuccess(Void aVoid) {
+                        Log.d("Success", "DocumentSnapshot successfully written!");
+                  }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.d("Failure", "Error writing document", e);
+                    }
+                });
+
     }
 
     @Override
@@ -420,7 +456,6 @@ public class MapsActivity extends FragmentActivity implements
     @Override
     public void onLocationChanged(Location location) {
 
-        lastLocation = location;
 
         if(currentUserLocationMarker != null)
         {
@@ -436,6 +471,13 @@ public class MapsActivity extends FragmentActivity implements
 
         currentUserLocationMarker = mMap.addMarker(markerOptions);
 
+        MarkerOptions martyMarker = new MarkerOptions().position(new LatLng(39.131800, -84.516840)).title("mcdanich");
+        martyMarker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+        mMap.addMarker(martyMarker);
+
+        MarkerOptions connorMarker = new MarkerOptions().position(new LatLng(39.131794, -84.518396)).title("silvacg");
+        connorMarker.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
+        mMap.addMarker(connorMarker);
 
         mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocationLongitudeLatitude));
         mMap.animateCamera(CameraUpdateFactory.zoomBy(14));
